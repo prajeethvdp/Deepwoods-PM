@@ -4,6 +4,7 @@ import { loadTeamFromStorage, saveTeamToStorage, sendAppsScriptAction, resetPass
 import { hashPassword, verifyPassword } from '../lib/cryptoUtils';
 
 const PASSWORDS_STORAGE_KEY = 'deepwoods_user_passwords';
+const OTP_STORAGE_KEY = 'deepwoods_password_reset_otps';
 
 const getStoredPasswordMap = (): Record<string, string> => {
   try {
@@ -28,6 +29,8 @@ interface AuthContextType {
   loginWithGoogle: (email: string, name: string) => Promise<{ success: boolean; user?: TeamMember; error?: string }>;
   loginWithPassword: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
   setPasswordForUser: (email: string, newPassword: string) => Promise<{ success: boolean; updatedUser?: TeamMember; error?: string }>;
+  sendPasswordResetOTP: (email: string) => Promise<{ success: boolean; error?: string; message?: string }>;
+  verifyOTPAndResetPassword: (email: string, otpCode: string, newPassword: string) => Promise<{ success: boolean; error?: string; message?: string }>;
   resetPassword: (email: string, newPassword: string) => Promise<{ success: boolean; error?: string; message?: string }>;
   logout: () => void;
 }
@@ -58,16 +61,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 4000);
+      const timeoutId = setTimeout(() => controller.abort(), 3500);
+
       const scriptUrl = import.meta.env.VITE_GOOGLE_APPS_SCRIPT_URL;
       if (scriptUrl) {
         const res = await fetch(`${scriptUrl}?action=getTeam`, { signal: controller.signal });
         clearTimeout(timeoutId);
+
         if (res.ok) {
-          const result = await res.json();
-          if (result.success && Array.isArray(result.data)) {
-            // Merge sheet data with local password cache so empty backend fields don't wipe out passwords
-            team = result.data.map((m: TeamMember) => {
+          const json = await res.json();
+          if (json.success && Array.isArray(json.data) && json.data.length > 0) {
+            team = json.data.map((m: any) => {
               const normEmail = (m.email || '').trim().toLowerCase();
               const cachedPassword = passMap[normEmail] || '';
               return {
@@ -75,16 +79,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 password: m.password || cachedPassword,
               };
             });
+
             saveTeamToStorage(team);
             backendSynced = true;
           }
         }
       }
-    } catch (e) {
-      console.warn('Fast team fetch warning (using local storage cache):', e);
+    } catch {
+      team = loadTeamFromStorage();
     }
 
-    // Attach cached passwords to local team list if needed
     team = team.map((m) => {
       const normEmail = (m.email || '').trim().toLowerCase();
       return {
@@ -96,116 +100,95 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return { team, backendSynced };
   };
 
+  const completeLogin = (userToLogin: TeamMember) => {
+    setUser(userToLogin);
+    localStorage.setItem('deepwoods_auth_user_id', userToLogin.id);
+  };
+
   const verifyGoogleUser = async (
     email: string,
     name: string
   ): Promise<{ success: boolean; user?: TeamMember; error?: string }> => {
     const normalized = email.trim().toLowerCase();
-    if (!normalized) {
-      return { success: false, error: 'Invalid Google account email.' };
-    }
-
-    const { team, backendSynced } = await fetchLatestTeam();
+    const { team } = await fetchLatestTeam();
     const found = team.find((m) => m.email && m.email.trim().toLowerCase() === normalized);
 
     if (found) {
       if (found.active === false) {
         return {
           success: false,
-          error: `Access Revoked: ${email} is set to Inactive (FALSE). Contact your administrator to reactivate access.`,
+          error: `Account for ${email} is inactive. Contact workspace admin for access.`,
         };
       }
       return { success: true, user: found };
     }
 
-    // Initial Setup: ONLY if Google Sheets backend returns an explicitly empty team list (0 members)
-    if (backendSynced && team.length === 0) {
-      const newMember: TeamMember = {
-        id: `tm-${Date.now()}`,
-        name: name || normalized.split('@')[0],
-        role: 'Member',
-        email: normalized,
-        color: '#06B6D4',
-        active: true,
-      };
-      const updatedTeam = [newMember];
-      saveTeamToStorage(updatedTeam);
-      sendAppsScriptAction('addTeamMember', { data: newMember });
-      return { success: true, user: newMember };
-    }
-
     return {
       success: false,
-      error: `Access Denied: ${email} is not an authorized team member. Please ask a workspace administrator to add your email under Team Settings or in Google Sheets.`,
+      error: `Access Denied: ${email} is not on the allowed team members list. Contact workspace admin to get added.`,
     };
-  };
-
-  const completeLogin = (member: TeamMember) => {
-    setUser(member);
-    localStorage.setItem('deepwoods_auth_user_id', member.id);
   };
 
   const loginWithGoogle = async (
     email: string,
     name: string
   ): Promise<{ success: boolean; user?: TeamMember; error?: string }> => {
-    const result = await verifyGoogleUser(email, name);
-    if (result.success && result.user) {
-      completeLogin(result.user);
+    const res = await verifyGoogleUser(email, name);
+    if (res.success && res.user) {
+      completeLogin(res.user);
     }
-    return result;
+    return res;
   };
 
-  const loginWithPassword = async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
+  const loginWithPassword = async (
+    email: string,
+    password: string
+  ): Promise<{ success: boolean; error?: string }> => {
     const normalized = email.trim().toLowerCase();
     if (!normalized) {
-      return { success: false, error: 'Please enter a valid email address.' };
+      return { success: false, error: 'Please enter your email address.' };
     }
     if (!password) {
       return { success: false, error: 'Please enter your password.' };
     }
 
     const { team } = await fetchLatestTeam();
+    const passMap = getStoredPasswordMap();
+
     const found = team.find((m) => m.email && m.email.trim().toLowerCase() === normalized);
 
     if (!found) {
       return {
         success: false,
-        error: `Access Denied: ${email} is not listed as a workspace team member. Please contact your workspace administrator.`,
+        error: `No account found for ${email}. Please check your email or contact workspace admin.`,
       };
     }
 
     if (found.active === false) {
       return {
         success: false,
-        error: `Access Revoked: Account ${email} is deactivated. Please contact your administrator.`,
+        error: `Account ${email} is inactive. Please contact workspace admin.`,
       };
+    }
+
+    const cachedPass = passMap[normalized];
+    if (cachedPass) {
+      found.password = cachedPass;
     }
 
     if (!found.password) {
       return {
         success: false,
-        error: `No password set for ${email}. Click "Forgot / Reset Password" below to set up your password.`,
+        error: `No password set for ${email}. Click "Forgot password?" below to set up your password.`,
       };
     }
 
-    // SHA-256 password verification
     const isValid = await verifyPassword(password, found.password);
     if (!isValid) {
       return {
         success: false,
-        error: 'Incorrect password. Please try again or use "Forgot / Reset Password".',
+        error: 'Incorrect password. Please check your credentials or click "Forgot password?".',
       };
-    }
-
-    // Auto-migrate legacy plain text password to SHA-256 hash if needed
-    if (found.password === password) {
-      const hashedPassword = await hashPassword(password);
-      found.password = hashedPassword;
-      setStoredPassword(normalized, hashedPassword);
-      const updatedTeam = team.map((m) => (m.id === found.id ? found : m));
-      saveTeamToStorage(updatedTeam);
-      resetPasswordInBackend(normalized, hashedPassword);
     }
 
     completeLogin(found);
@@ -239,47 +222,143 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     updatedTeam[foundIndex] = updatedMember;
 
     saveTeamToStorage(updatedTeam);
-    // Sync to Google Sheets asynchronously in background so login responds instantly
     resetPasswordInBackend(normalized, hashedPassword).catch((err) =>
       console.warn('Background sheet password sync:', err)
     );
     return { success: true, updatedUser: updatedMember };
   };
 
-  const resetPassword = async (
-    email: string,
-    newPassword: string
+  // Step 1: Send OTP Verification Code to Email
+  const sendPasswordResetOTP = async (
+    email: string
   ): Promise<{ success: boolean; error?: string; message?: string }> => {
     const normalized = email.trim().toLowerCase();
     if (!normalized) {
       return { success: false, error: 'Please enter a valid email address.' };
     }
+
+    const { team } = await fetchLatestTeam();
+    const found = team.find((m) => m.email && m.email.trim().toLowerCase() === normalized);
+
+    if (!found) {
+      return {
+        success: false,
+        error: `No authorized team member found with email: ${email}. Please check the email address.`,
+      };
+    }
+
+    if (found.active === false) {
+      return {
+        success: false,
+        error: `Account ${email} is inactive. Contact workspace admin for assistance.`,
+      };
+    }
+
+    // Generate 6-digit numeric OTP code
+    const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = Date.now() + 10 * 60 * 1000; // 10 minutes expiry
+
+    // Store in localStorage
+    try {
+      const rawOtps = localStorage.getItem(OTP_STORAGE_KEY);
+      const otps = rawOtps ? JSON.parse(rawOtps) : {};
+      otps[normalized] = { code: otpCode, expiresAt };
+      localStorage.setItem(OTP_STORAGE_KEY, JSON.stringify(otps));
+    } catch (err) {
+      console.error('Failed to store OTP in local storage:', err);
+    }
+
+    // Dispatch Verification Email via Apps Script Gmail Service
+    const emailHtml = `
+      <div style="font-family: Arial, sans-serif; max-width: 520px; margin: 0 auto; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; padding: 28px; color: #1e293b;">
+        <div style="text-align: center; margin-bottom: 20px;">
+          <h2 style="color: #059669; margin: 0; font-size: 22px; font-weight: 800;">Deepwoods Green</h2>
+          <p style="color: #64748b; font-size: 13px; margin-top: 4px;">Password Reset Verification Code</p>
+        </div>
+        <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; text-align: center; margin: 20px 0;">
+          <p style="font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: #64748b; margin: 0 0 8px 0; font-weight: bold;">Your 6-Digit Verification Code</p>
+          <div style="font-size: 36px; font-weight: 900; letter-spacing: 8px; color: #059669; font-family: monospace;">${otpCode}</div>
+          <p style="font-size: 11px; color: #94a3b8; margin: 10px 0 0 0;">Valid for 10 minutes. Do not share this code with anyone.</p>
+        </div>
+        <p style="font-size: 12px; color: #475569; line-height: 1.5;">
+          Hello <strong>${found.name}</strong>,<br/>
+          We received a request to reset your password for your Deepwoods Green account. Enter the verification code above in the login screen to complete your password reset.
+        </p>
+        <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 24px 0 16px 0;" />
+        <p style="font-size: 11px; color: #94a3b8; text-align: center; margin: 0;">
+          If you did not request a password reset, you can safely ignore this email.
+        </p>
+      </div>
+    `;
+
+    sendAppsScriptAction('sendEmail', {
+      recipientEmail: normalized,
+      subject: `🔐 Deepwoods Green - Password Reset Verification Code (${otpCode})`,
+      htmlBody: emailHtml,
+    }).catch((err) => console.warn('Background email dispatch:', err));
+
+    return {
+      success: true,
+      message: `Verification code sent to ${email}! Check your inbox.`,
+    };
+  };
+
+  // Step 2: Verify OTP Code & Reset Password
+  const verifyOTPAndResetPassword = async (
+    email: string,
+    otpCode: string,
+    newPassword: string
+  ): Promise<{ success: boolean; error?: string; message?: string }> => {
+    const normalized = email.trim().toLowerCase();
+    const cleanOTP = otpCode.trim();
+
+    if (!normalized || !cleanOTP) {
+      return { success: false, error: 'Please enter the 6-digit verification code sent to your email.' };
+    }
+
     if (!newPassword || newPassword.length < 4) {
       return { success: false, error: 'Password must be at least 4 characters long.' };
     }
 
+    // Verify OTP Code
+    try {
+      const rawOtps = localStorage.getItem(OTP_STORAGE_KEY);
+      const otps = rawOtps ? JSON.parse(rawOtps) : {};
+      const stored = otps[normalized];
+
+      if (!stored || stored.code !== cleanOTP) {
+        return {
+          success: false,
+          error: 'Invalid verification code. Please check your email and enter the correct 6-digit code.',
+        };
+      }
+
+      if (Date.now() > stored.expiresAt) {
+        return {
+          success: false,
+          error: 'Verification code has expired. Please request a new code.',
+        };
+      }
+
+      // OTP is valid! Clear used OTP
+      delete otps[normalized];
+      localStorage.setItem(OTP_STORAGE_KEY, JSON.stringify(otps));
+    } catch (err) {
+      console.error('OTP Verification Error:', err);
+    }
+
+    // Complete password reset
     const { team } = await fetchLatestTeam();
     const foundIndex = team.findIndex((m) => m.email && m.email.trim().toLowerCase() === normalized);
 
     if (foundIndex === -1) {
-      return {
-        success: false,
-        error: `No registered team member found with email: ${email}. Please check the email address.`,
-      };
-    }
-
-    const member = team[foundIndex];
-    if (member.active === false) {
-      return {
-        success: false,
-        error: `Account ${email} is set to Inactive. Password cannot be reset for inactive accounts.`,
-      };
+      return { success: false, error: 'Team member not found.' };
     }
 
     const hashedPassword = await hashPassword(newPassword);
     setStoredPassword(normalized, hashedPassword);
 
-    const updatedMember = { ...member, password: hashedPassword };
+    const updatedMember = { ...team[foundIndex], password: hashedPassword };
     const updatedTeam = [...team];
     updatedTeam[foundIndex] = updatedMember;
 
@@ -290,8 +369,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     return {
       success: true,
-      message: `Password updated successfully for ${email}! You can now sign in with your new password.`,
+      message: `Password reset verified & updated successfully for ${email}! You can now sign in with your new password.`,
     };
+  };
+
+  const resetPassword = async (
+    email: string,
+    newPassword: string
+  ): Promise<{ success: boolean; error?: string; message?: string }> => {
+    return verifyOTPAndResetPassword(email, '000000', newPassword);
   };
 
   const logout = () => {
@@ -309,6 +395,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         loginWithGoogle,
         loginWithPassword,
         setPasswordForUser,
+        sendPasswordResetOTP,
+        verifyOTPAndResetPassword,
         resetPassword,
         logout,
       }}

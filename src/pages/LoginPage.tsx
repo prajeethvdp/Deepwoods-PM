@@ -8,6 +8,9 @@ import {
   CheckCircle2,
   ShieldCheck,
   Check,
+  Send,
+  KeyRound,
+  Mail,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { TeamMember } from '../types';
@@ -17,7 +20,14 @@ interface LoginPageProps {
 }
 
 export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
-  const { verifyGoogleUser, completeLogin, loginWithPassword, setPasswordForUser, resetPassword } = useAuth();
+  const {
+    verifyGoogleUser,
+    completeLogin,
+    loginWithPassword,
+    setPasswordForUser,
+    sendPasswordResetOTP,
+    verifyOTPAndResetPassword,
+  } = useAuth();
 
   // Primary Login State: Default to Google OAuth when opened
   const [authMethod, setAuthMethod] = useState<'google' | 'password'>('google');
@@ -43,9 +53,11 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
   const [googleModalSubmitting, setGoogleModalSubmitting] = useState(false);
   const [googleModalError, setGoogleModalError] = useState<string | null>(null);
 
-  // Reset Password Modal State
+  // 2-Step Reset Password Modal State
   const [isResetModalOpen, setIsResetModalOpen] = useState(false);
+  const [resetStep, setResetStep] = useState<1 | 2>(1); // 1 = Enter Email, 2 = Verify Code & Password
   const [resetEmail, setResetEmail] = useState('');
+  const [otpCode, setOtpCode] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showResetPassword, setShowResetPassword] = useState(false);
@@ -171,18 +183,20 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
     }
   };
 
-  // Open Reset Password Modal
+  // Open Reset Password Modal (Step 1)
   const handleOpenResetModal = () => {
     setResetEmail(email.trim());
+    setOtpCode('');
     setNewPassword('');
     setConfirmPassword('');
     setResetError(null);
     setResetSuccess(null);
+    setResetStep(1);
     setIsResetModalOpen(true);
   };
 
-  // Handle Reset Password Submit
-  const handleResetPasswordSubmit = async (e: React.FormEvent) => {
+  // Step 1: Request OTP Verification Email
+  const handleSendResetOTP = async (e: React.FormEvent) => {
     e.preventDefault();
     setResetError(null);
     setResetSuccess(null);
@@ -192,8 +206,35 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
       return;
     }
 
+    setResetSubmitting(true);
+    try {
+      const res = await sendPasswordResetOTP(resetEmail);
+      if (res.success) {
+        setResetSuccess(res.message || `Verification code sent to ${resetEmail}!`);
+        setResetStep(2); // Move to Step 2: Verification Code & New Password
+      } else {
+        setResetError(res.error || 'Failed to send verification code.');
+      }
+    } catch (err) {
+      setResetError('An unexpected error occurred while sending verification code.');
+    } finally {
+      setResetSubmitting(false);
+    }
+  };
+
+  // Step 2: Verify OTP & Change Password
+  const handleVerifyOTPAndReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setResetError(null);
+    setResetSuccess(null);
+
+    if (!otpCode.trim() || otpCode.trim().length < 4) {
+      setResetError('Please enter the 6-digit verification code sent to your email.');
+      return;
+    }
+
     if (!newPassword || newPassword.length < 4) {
-      setResetError('Password must be at least 4 characters long.');
+      setResetError('New password must be at least 4 characters long.');
       return;
     }
 
@@ -204,20 +245,20 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
 
     setResetSubmitting(true);
     try {
-      const res = await resetPassword(resetEmail, newPassword);
+      const res = await verifyOTPAndResetPassword(resetEmail, otpCode, newPassword);
       if (res.success) {
-        setResetSuccess(res.message || 'Password updated successfully!');
+        setResetSuccess(res.message || 'Password reset & updated successfully!');
         setEmail(resetEmail);
         setPassword(newPassword);
         setTimeout(() => {
           setIsResetModalOpen(false);
-          setSuccessMessage('Password updated! Click Sign In to log in.');
-        }, 1800);
+          setSuccessMessage('Password reset verified & updated! Click Sign In to log in.');
+        }, 2000);
       } else {
-        setResetError(res.error || 'Failed to reset password.');
+        setResetError(res.error || 'Verification failed.');
       }
     } catch (err) {
-      setResetError('An unexpected error occurred during password reset.');
+      setResetError('An unexpected error occurred during password verification.');
     } finally {
       setResetSubmitting(false);
     }
@@ -351,7 +392,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
 
           {/* Minimal Underline Style Password Form */}
           <form onSubmit={handlePasswordSubmit} className="space-y-5 pt-1">
-            {/* Email Field with Underline Style & Right Validation Checkmark */}
+            {/* Email Field */}
             <div className="space-y-1 relative">
               <label className="text-xs font-semibold text-slate-400 block">
                 Email Address
@@ -373,7 +414,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
               </div>
             </div>
 
-            {/* Password Field with Underline Style & Right Toggle */}
+            {/* Password Field */}
             <div className="space-y-1 relative">
               <div className="flex items-center justify-between">
                 <label className="text-xs font-semibold text-slate-400 block">
@@ -406,7 +447,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
               </div>
             </div>
 
-            {/* Large Smooth Pill Action Button in Deepwoods Emerald Green */}
+            {/* Sign in button */}
             <button
               type="submit"
               disabled={isSubmitting}
@@ -422,7 +463,6 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
               )}
             </button>
           </form>
-
         </div>
 
         {/* Footer Security Badge */}
@@ -491,10 +531,10 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
         </div>
       )}
 
-      {/* RESET PASSWORD MODAL */}
+      {/* 2-STEP EMAIL OTP VERIFICATION RESET PASSWORD MODAL */}
       {isResetModalOpen && (
         <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl border border-slate-100 space-y-4 relative">
+          <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl border border-slate-100 space-y-4 relative animate-in zoom-in duration-150">
             <button
               onClick={() => setIsResetModalOpen(false)}
               className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 text-lg leading-none"
@@ -502,7 +542,17 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
               &times;
             </button>
 
-            <h3 className="font-bold text-slate-900 text-base">Reset Password</h3>
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 bg-emerald-50 border border-emerald-200 rounded-2xl text-emerald-600">
+                <KeyRound className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="font-bold text-slate-900 text-base">Reset Account Password</h3>
+                <p className="text-xs text-slate-400 font-medium">
+                  {resetStep === 1 ? 'Step 1: Request Email Verification Code' : 'Step 2: Enter OTP Code & Set Password'}
+                </p>
+              </div>
+            </div>
 
             {resetError && (
               <div className="bg-red-50 text-red-700 text-xs p-3 rounded-xl border border-red-200">
@@ -510,62 +560,136 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
               </div>
             )}
             {resetSuccess && (
-              <div className="bg-emerald-50 text-emerald-700 text-xs p-3 rounded-xl border border-emerald-200">
+              <div className="bg-emerald-50 text-emerald-700 text-xs p-3 rounded-xl border border-emerald-200 font-medium">
                 {resetSuccess}
               </div>
             )}
 
-            <form onSubmit={handleResetPasswordSubmit} className="space-y-4 text-xs">
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">Email Address</label>
-                <input
-                  type="email"
-                  value={resetEmail}
-                  onChange={(e) => setResetEmail(e.target.value)}
-                  required
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-900 focus:outline-none focus:border-emerald-600"
-                />
-              </div>
+            {/* STEP 1 FORM: ENTER EMAIL & REQUEST OTP CODE */}
+            {resetStep === 1 ? (
+              <form onSubmit={handleSendResetOTP} className="space-y-4 text-xs pt-1">
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Registered Email Address</label>
+                  <input
+                    type="email"
+                    value={resetEmail}
+                    onChange={(e) => setResetEmail(e.target.value)}
+                    placeholder="user@deepwoodsgreen.com"
+                    required
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-900 focus:bg-white focus:outline-none focus:border-emerald-600 transition"
+                  />
+                  <p className="text-[11px] text-slate-400 mt-1.5">
+                    We will send a 6-digit verification code to your email to confirm your identity.
+                  </p>
+                </div>
 
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">New Password</label>
-                <input
-                  type="password"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  required
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-900 focus:outline-none focus:border-emerald-600"
-                />
-              </div>
+                <div className="flex justify-end gap-3 pt-2 border-t border-slate-100">
+                  <button
+                    type="button"
+                    onClick={() => setIsResetModalOpen(false)}
+                    className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={resetSubmitting}
+                    className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl shadow-xs flex items-center gap-2 transition disabled:opacity-50"
+                  >
+                    {resetSubmitting ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span>Sending Code...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Send className="w-3.5 h-3.5" />
+                        <span>Send Verification Code</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+            ) : (
+              /* STEP 2 FORM: ENTER 6-DIGIT CODE & NEW PASSWORD */
+              <form onSubmit={handleVerifyOTPAndReset} className="space-y-4 text-xs pt-1">
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">
+                    6-Digit Email Verification Code
+                  </label>
+                  <input
+                    type="text"
+                    maxLength={6}
+                    value={otpCode}
+                    onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
+                    placeholder="e.g. 849201"
+                    required
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-900 font-mono text-center text-lg font-bold tracking-widest focus:bg-white focus:outline-none focus:border-emerald-600 transition"
+                  />
+                  <div className="flex items-center justify-between mt-1 text-[11px]">
+                    <span className="text-slate-400">Code sent to: {resetEmail}</span>
+                    <button
+                      type="button"
+                      onClick={() => setResetStep(1)}
+                      className="text-emerald-700 font-bold hover:underline"
+                    >
+                      Resend Code
+                    </button>
+                  </div>
+                </div>
 
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">Confirm New Password</label>
-                <input
-                  type="password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  required
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-900 focus:outline-none focus:border-emerald-600"
-                />
-              </div>
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">New Password</label>
+                  <input
+                    type="password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="Min 4 characters"
+                    required
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-900 focus:bg-white focus:outline-none focus:border-emerald-600 transition"
+                  />
+                </div>
 
-              <div className="flex justify-end gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setIsResetModalOpen(false)}
-                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={resetSubmitting}
-                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl shadow-xs"
-                >
-                  Reset Password
-                </button>
-              </div>
-            </form>
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Confirm New Password</label>
+                  <input
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="Re-enter password"
+                    required
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-900 focus:bg-white focus:outline-none focus:border-emerald-600 transition"
+                  />
+                </div>
+
+                <div className="flex justify-end gap-3 pt-2 border-t border-slate-100">
+                  <button
+                    type="button"
+                    onClick={() => setResetStep(1)}
+                    className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl"
+                  >
+                    Back
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={resetSubmitting}
+                    className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl shadow-xs flex items-center gap-2 transition disabled:opacity-50"
+                  >
+                    {resetSubmitting ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span>Verifying...</span>
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle2 className="w-4 h-4" />
+                        <span>Verify & Change Password</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+            )}
           </div>
         </div>
       )}
