@@ -92,7 +92,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 }`}
               >
                 <Icon className="w-5 h-5 shrink-0" />
-                <span className="text-xs truncate whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200 delay-75">
+                <span className="text-xs truncate whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200 delay-75 font-sans">
                   {item.label}
                 </span>
                 {item.badge !== undefined && item.badge > 0 && (
@@ -117,7 +117,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             title="Projects"
           >
             <Folder className="w-5 h-5 shrink-0 text-emerald-600" />
-            <span className="text-xs truncate whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200 delay-75 flex-1 text-left">
+            <span className="text-xs truncate whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200 delay-75 flex-1 text-left font-sans">
               Projects
             </span>
             <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 shrink-0">
@@ -183,7 +183,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             title="Sign Out"
           >
             <LogOut className="w-5 h-5 shrink-0" />
-            <span className="text-xs truncate whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200 delay-75">
+            <span className="text-xs truncate whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200 delay-75 font-sans">
               Sign Out
             </span>
           </button>
