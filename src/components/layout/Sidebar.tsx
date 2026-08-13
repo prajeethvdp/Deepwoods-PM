@@ -22,12 +22,14 @@ interface SidebarProps {
   openNewTaskModal: () => void;
   openNewProjectModal: () => void;
   openNotificationDrawer?: () => void;
+  navigateToProject: (projectId: string) => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
   currentTab,
   setCurrentTab,
   openNewProjectModal,
+  navigateToProject,
 }) => {
   const { tasks, projects } = useData();
   const { user, logout } = useAuth();
@@ -134,7 +136,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 projects.map((proj) => (
                   <div
                     key={proj.id}
-                    className="flex items-center gap-2 px-2 py-1.5 rounded-xl hover:bg-slate-50 cursor-default"
+                    onClick={() => navigateToProject(proj.id)}
+                    className="flex items-center gap-2 px-2 py-1.5 rounded-xl hover:bg-emerald-50 hover:text-emerald-700 cursor-pointer transition"
                   >
                     <span
                       className="w-2.5 h-2.5 rounded-full flex-shrink-0"

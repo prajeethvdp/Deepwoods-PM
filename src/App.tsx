@@ -19,7 +19,22 @@ import { TaskStatus } from './types';
 
 const MainApp: React.FC = () => {
   const { isAuthenticated } = useAuth();
-  const [currentTab, setCurrentTab] = useState<string>('dashboard');
+  const { setSelectedProjectId } = useData();
+
+  // Persist the current tab across page refreshes
+  const [currentTab, setCurrentTabState] = useState<string>(
+    () => localStorage.getItem('deepwoods_tab') || 'dashboard'
+  );
+  const setCurrentTab = (tab: string) => {
+    setCurrentTabState(tab);
+    localStorage.setItem('deepwoods_tab', tab);
+  };
+
+  // Click a project in the sidebar → go to List View filtered to that project
+  const navigateToProject = (projectId: string) => {
+    setSelectedProjectId(projectId);
+    setCurrentTab('list');
+  };
 
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
   const [taskModalDefaultStatus, setTaskModalDefaultStatus] = useState<TaskStatus>('To Do');
@@ -80,6 +95,7 @@ const MainApp: React.FC = () => {
         openNewTaskModal={() => openTaskModalWithStatus('To Do')}
         openNewProjectModal={() => setIsProjectModalOpen(true)}
         openNotificationDrawer={() => setIsNotificationDrawerOpen(true)}
+        navigateToProject={navigateToProject}
       />
 
       {/* Main Content Area */}
