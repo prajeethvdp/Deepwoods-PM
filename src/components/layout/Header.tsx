@@ -180,22 +180,24 @@ export const Header: React.FC<HeaderProps> = ({
           </span>
         </div>
 
-        {/* Project Switcher Dropdown */}
-        <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-2xl text-xs font-semibold text-slate-700">
-          <Folder className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0" />
-          <select
-            value={selectedProjectId}
-            onChange={(e) => setSelectedProjectId(e.target.value)}
-            className="bg-transparent text-slate-900 font-bold focus:outline-none cursor-pointer pr-1"
-          >
-            <option value="ALL">All Projects ({projects.length})</option>
-            {projects.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name}
-              </option>
-            ))}
-          </select>
-        </div>
+        {/* Project Switcher Dropdown (Only show on task/project views, not Team Settings or Docs) */}
+        {currentTab !== 'team' && currentTab !== 'docs' && (
+          <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-2xl text-xs font-semibold text-slate-700">
+            <Folder className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0" />
+            <select
+              value={selectedProjectId}
+              onChange={(e) => setSelectedProjectId(e.target.value)}
+              className="bg-transparent text-slate-900 font-bold focus:outline-none cursor-pointer pr-1"
+            >
+              <option value="ALL">All Projects ({projects.length})</option>
+              {projects.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
       </div>
 
       {/* Right: Global Actions (Search, Notifications, Filters, Sync, + New Task, Profile) */}
