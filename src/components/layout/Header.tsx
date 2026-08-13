@@ -175,9 +175,9 @@ export const Header: React.FC<HeaderProps> = ({
       {/* Left: Page Title & Project Dropdown */}
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-2">
-          <span className="font-extrabold text-base text-slate-900 tracking-tight">
+          <h1 className="font-bold text-lg text-slate-900 tracking-tight font-serif">
             {getTabTitle()}
-          </span>
+          </h1>
         </div>
 
         {/* Project Switcher Dropdown (Only show on task/project views, not Team Settings or Docs) */}
