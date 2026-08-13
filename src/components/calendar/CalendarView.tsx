@@ -3,7 +3,6 @@ import {
   ChevronLeft,
   ChevronRight,
   Calendar as CalendarIcon,
-  Search,
   CheckCircle2,
   Clock,
   AlertCircle,
@@ -19,9 +18,8 @@ interface CalendarViewProps {
 }
 
 export const CalendarView: React.FC<CalendarViewProps> = ({ onAddDateTask }) => {
-  const { tasks, projects, teamMembers, openTaskDetail } = useData();
+  const { tasks, projects, teamMembers, openTaskDetail, filterOptions } = useData();
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const [assigneeFilter, setAssigneeFilter] = useState<string>('ALL');
 
@@ -53,9 +51,11 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ onAddDateTask }) => 
 
   const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
-  // Scheduled tasks filtering
+  // Scheduled tasks filtering — uses global header search
   const filteredTasks = tasks.filter((t) => {
-    const matchesSearch = t.title.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSearch = !filterOptions.searchQuery ||
+      t.title.toLowerCase().includes(filterOptions.searchQuery.toLowerCase()) ||
+      (t.description || '').toLowerCase().includes(filterOptions.searchQuery.toLowerCase());
     const matchesStatus = statusFilter === 'ALL' || t.status === statusFilter;
     const matchesAssignee = assigneeFilter === 'ALL' || t.assigneeId === assigneeFilter;
     return matchesSearch && matchesStatus && matchesAssignee;
@@ -102,19 +102,8 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ onAddDateTask }) => 
           </div>
         </div>
 
-        {/* Right: Filters & Search */}
+        {/* Right: Filters */}
         <div className="flex items-center gap-3 flex-wrap">
-          {/* Search input */}
-          <div className="relative w-48">
-            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search calendar..."
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-8 pr-3 py-1.5 text-xs text-slate-800 placeholder-slate-400 focus:bg-white focus:outline-none focus:border-cyan-500 transition"
-            />
-          </div>
 
           {/* Assignee Filter */}
           <select

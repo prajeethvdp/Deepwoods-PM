@@ -202,19 +202,21 @@ export const Header: React.FC<HeaderProps> = ({
 
       {/* Right: Global Actions (Search, Notifications, Filters, Sync, + New Task, Profile) */}
       <div className="flex items-center gap-3">
-        {/* Search Bar */}
-        <div className="relative hidden md:block w-48">
-          <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-          <input
-            type="text"
-            placeholder="Search tasks..."
-            value={filterOptions.searchQuery}
-            onChange={(e) =>
-              setFilterOptions((prev) => ({ ...prev, searchQuery: e.target.value }))
-            }
-            className="w-full pl-8 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-full text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-emerald-500 transition"
-          />
-        </div>
+        {/* Search Bar - Always visible, works across all views */}
+        {currentTab !== 'team' && currentTab !== 'docs' && (
+          <div className="relative w-52">
+            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              placeholder="Search tasks..."
+              value={filterOptions.searchQuery}
+              onChange={(e) =>
+                setFilterOptions((prev) => ({ ...prev, searchQuery: e.target.value }))
+              }
+              className="w-full pl-8 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-full text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-200 transition"
+            />
+          </div>
+        )}
 
         {/* Notification Bell Button */}
         <button
