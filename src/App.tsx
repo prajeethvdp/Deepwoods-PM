@@ -87,7 +87,7 @@ const MainApp: React.FC = () => {
   };
 
   return (
-    <div className="flex h-screen w-screen bg-[#EEF2F6] p-2.5 gap-2.5 overflow-hidden font-sans antialiased">
+    <div className="flex h-screen w-screen bg-[#EEF2F6] p-1.5 sm:p-2.5 gap-1.5 sm:gap-2.5 overflow-hidden font-sans antialiased pb-16 md:pb-2.5">
       {/* Floating White Icon Sidebar */}
       <Sidebar
         currentTab={currentTab}

@@ -171,23 +171,23 @@ export const Header: React.FC<HeaderProps> = ({
   };
 
   return (
-    <header className="bg-white rounded-3xl p-3 px-5 border border-slate-200/80 shadow-xs flex items-center justify-between gap-4 sticky top-0 z-30 select-none">
+    <header className="bg-white rounded-3xl p-2.5 sm:p-3 px-3 sm:px-5 border border-slate-200/80 shadow-xs flex flex-wrap sm:flex-nowrap items-center justify-between gap-2 sm:gap-4 sticky top-0 z-30 select-none">
       {/* Left: Page Title & Project Dropdown */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-2.5 sm:gap-4 shrink-0">
         <div className="flex items-center gap-2">
-          <h1 className="font-bold text-lg text-slate-900 tracking-tight font-serif">
+          <h1 className="font-bold text-base sm:text-lg text-slate-900 tracking-tight font-serif whitespace-nowrap">
             {getTabTitle()}
           </h1>
         </div>
 
         {/* Project Switcher Dropdown (Only show on task/project views, not Team Settings or Docs) */}
         {currentTab !== 'team' && currentTab !== 'docs' && (
-          <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-2xl text-xs font-semibold text-slate-700">
+          <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 px-2.5 sm:px-3 py-1.5 rounded-2xl text-xs font-semibold text-slate-700">
             <Folder className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0" />
             <select
               value={selectedProjectId}
               onChange={(e) => setSelectedProjectId(e.target.value)}
-              className="bg-transparent text-slate-900 font-bold focus:outline-none cursor-pointer pr-1"
+              className="bg-transparent text-slate-900 font-bold focus:outline-none cursor-pointer pr-1 max-w-[120px] sm:max-w-[180px] truncate"
             >
               <option value="ALL">All Projects ({projects.length})</option>
               {projects.map((p) => (
@@ -201,19 +201,19 @@ export const Header: React.FC<HeaderProps> = ({
       </div>
 
       {/* Right: Global Actions (Search, Notifications, Filters, Sync, + New Task, Profile) */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-1.5 sm:gap-3">
         {/* Search Bar - Always visible, works across all views */}
         {currentTab !== 'team' && currentTab !== 'docs' && (
-          <div className="relative w-52">
-            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+          <div className="relative w-28 sm:w-40 md:w-52">
+            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
             <input
               type="text"
-              placeholder="Search tasks..."
+              placeholder="Search..."
               value={filterOptions.searchQuery}
               onChange={(e) =>
                 setFilterOptions((prev) => ({ ...prev, searchQuery: e.target.value }))
               }
-              className="w-full pl-8 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-full text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-200 transition"
+              className="w-full pl-7 sm:pl-8 pr-2.5 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-full text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-200 transition"
             />
           </div>
         )}
