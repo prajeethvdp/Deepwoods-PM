@@ -239,7 +239,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     updatedTeam[foundIndex] = updatedMember;
 
     saveTeamToStorage(updatedTeam);
-    await resetPasswordInBackend(normalized, hashedPassword);
+    // Sync to Google Sheets asynchronously in background so login responds instantly
+    resetPasswordInBackend(normalized, hashedPassword).catch((err) =>
+      console.warn('Background sheet password sync:', err)
+    );
     return { success: true, updatedUser: updatedMember };
   };
 
@@ -281,7 +284,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     updatedTeam[foundIndex] = updatedMember;
 
     saveTeamToStorage(updatedTeam);
-    await resetPasswordInBackend(normalized, hashedPassword);
+    resetPasswordInBackend(normalized, hashedPassword).catch((err) =>
+      console.warn('Background sheet password sync:', err)
+    );
 
     return {
       success: true,
