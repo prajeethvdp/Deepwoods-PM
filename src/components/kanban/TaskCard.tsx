@@ -79,11 +79,19 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task }) => {
       onClick={() => openTaskDetail(task)}
       className="bg-white rounded-lg p-3.5 border border-slate-200/60 shadow-xs hover:shadow-sm transition-all duration-150 cursor-pointer select-none group"
     >
-      {/* Row 1: Priority + Days */}
+      {/* Row 1: Avatar (top-left) + Days (top-right) */}
       <div className="flex items-center justify-between mb-2.5">
-        <span className={`text-[10px] font-bold px-2 py-0.5 rounded leading-none ${priorityStyle.bg} ${priorityStyle.text} ${priorityStyle.border}`}>
-          {priorityStyle.label}
-        </span>
+        {assignee ? (
+          <div
+            className="w-6 h-6 rounded-full flex items-center justify-center text-white text-[10px] font-bold border-2 border-white shadow-xs flex-shrink-0"
+            style={{ backgroundColor: assignee.color }}
+            title={assignee.name}
+          >
+            {assignee.name.charAt(0)}
+          </div>
+        ) : (
+          <div className="w-6 h-6 rounded-full bg-slate-100 flex-shrink-0" />
+        )}
 
         {daysLabel && (
           <span className={`flex items-center gap-1 text-[10px] font-semibold ${
@@ -134,7 +142,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task }) => {
         </div>
       )}
 
-      {/* Footer: Attach count + Subtask count + Assignee */}
+      {/* Footer: Attach count + Subtask count + Priority badge */}
       <div className="flex items-center justify-between pt-2.5 border-t border-slate-100">
         <div className="flex items-center gap-3 text-[11px] text-slate-400 font-semibold">
           <span className="flex items-center gap-1">
@@ -147,15 +155,9 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task }) => {
           </span>
         </div>
 
-        {assignee && (
-          <div
-            className="w-6 h-6 rounded-full flex items-center justify-center text-white text-[10px] font-bold border-2 border-white shadow-xs flex-shrink-0"
-            style={{ backgroundColor: assignee.color }}
-            title={assignee.name}
-          >
-            {assignee.name.charAt(0)}
-          </div>
-        )}
+        <span className={`text-[10px] font-bold px-2 py-0.5 rounded leading-none ${priorityStyle.bg} ${priorityStyle.text} ${priorityStyle.border}`}>
+          {priorityStyle.label}
+        </span>
       </div>
     </div>
   );
