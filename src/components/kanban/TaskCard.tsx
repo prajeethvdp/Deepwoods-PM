@@ -26,7 +26,7 @@ const getPriorityStyle = (priority: string): { bg: string; text: string; border:
 };
 
 export const TaskCard: React.FC<TaskCardProps> = ({ task }) => {
-  const { openTaskDetail, projects, teamMembers } = useData();
+  const { openTaskDetail, projects, teamMembers, comments } = useData();
 
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: task.id,
@@ -67,6 +67,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task }) => {
   }
 
   const attachCount = task.attachments?.length || 0;
+  const commentCount = comments.filter((c) => c.taskId === task.id).length;
   const subtaskCount = task.subtasks?.length || 0;
   const completedSubtasks = task.subtasks?.filter((s) => s.completed).length || 0;
 
@@ -151,7 +152,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task }) => {
           </span>
           <span className="flex items-center gap-1">
             <MessageSquare className="w-3 h-3" />
-            {subtaskCount}
+            {commentCount}
           </span>
         </div>
 
