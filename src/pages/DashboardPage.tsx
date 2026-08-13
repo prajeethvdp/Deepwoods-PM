@@ -171,7 +171,7 @@ export const DashboardPage: React.FC = () => {
 
   return (
     <div className="w-full min-h-full bg-[#EEF2F6] p-4 md:p-5 space-y-5 text-slate-800 font-sans select-none">
-      {/* Row 1: Stat Cards with Original Card Titles & New UI Layout */}
+      {/* Row 1: Stat Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
         {/* 1. TOTAL TASKS */}
         <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-2xs flex flex-col justify-between h-32">
@@ -184,10 +184,6 @@ export const DashboardPage: React.FC = () => {
           <div className="flex items-end justify-between">
             <div className="text-3xl font-extrabold text-slate-900 leading-none">{totalTasksCount}</div>
             <div className="text-right">
-              <div className="text-[11px] font-bold text-emerald-500 flex items-center justify-end gap-0.5">
-                <TrendingUp className="w-3 h-3" />
-                <span>+7%</span>
-              </div>
               <span className="text-[10px] text-slate-400 font-medium block">Across {displayProjects.length} {displayProjects.length === 1 ? 'Project' : 'Projects'}</span>
             </div>
           </div>
@@ -206,10 +202,6 @@ export const DashboardPage: React.FC = () => {
               {overdueTasks.length}
             </div>
             <div className="text-right">
-              <div className={`text-[11px] font-bold flex items-center justify-end gap-0.5 ${overdueTasks.length > 0 ? 'text-rose-500' : 'text-emerald-500'}`}>
-                {overdueTasks.length > 0 ? <TrendingDown className="w-3 h-3" /> : <TrendingUp className="w-3 h-3" />}
-                <span>{overdueTasks.length > 0 ? '-2%' : '0%'}</span>
-              </div>
               <span className="text-[10px] text-slate-400 font-medium block">
                 {overdueTasks.length > 0 ? 'Requires Immediate Attention' : 'All Tasks On Schedule'}
               </span>
@@ -228,10 +220,6 @@ export const DashboardPage: React.FC = () => {
           <div className="flex items-end justify-between">
             <div className="text-3xl font-extrabold text-slate-900 leading-none">{inProgressTasks.length}</div>
             <div className="text-right">
-              <div className="text-[11px] font-bold text-emerald-500 flex items-center justify-end gap-0.5">
-                <TrendingUp className="w-3 h-3" />
-                <span>+3%</span>
-              </div>
               <span className="text-[10px] text-slate-400 font-medium block">Currently Under Active Work</span>
             </div>
           </div>
@@ -250,10 +238,6 @@ export const DashboardPage: React.FC = () => {
           <div className="flex items-end justify-between">
             <div className="text-3xl font-extrabold text-slate-900 leading-none">{completedInDateRange.length}</div>
             <div className="text-right min-w-0 pl-2">
-              <div className="text-[11px] font-bold text-emerald-500 flex items-center justify-end gap-0.5">
-                <TrendingUp className="w-3 h-3" />
-                <span>+9%</span>
-              </div>
               <span className="text-[10px] text-slate-400 font-medium block truncate" title={dateSubtext}>
                 {dateSubtext}
               </span>
