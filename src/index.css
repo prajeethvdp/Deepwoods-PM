@@ -3,12 +3,12 @@
 
 @theme {
   --font-serif: 'Lora', Georgia, Cambria, 'Times New Roman', Times, serif;
-  --font-sans: 'Inter', Helvetica, Arial, sans-serif;
+  --font-sans: 'Inter', Helvetica, sans-serif;
 }
 
-/* Universal selector ensuring Inter is the primary font for all non-heading elements */
+/* Universal selector ensuring Inter (without Arial) for all non-heading elements */
 html, body, div, span, p, a, button, input, select, textarea, label, td, th, li, ul, ol, strong, b, em, small {
-  font-family: 'Inter', Helvetica, Arial, sans-serif;
+  font-family: 'Inter', Helvetica, sans-serif;
 }
 
 /* Force Lora for Headings & Title Elements */
@@ -22,7 +22,7 @@ body h1, body h2, body h3, body h4, body h5, body h6 {
 
 /* Utility Class Overrides */
 .font-sans {
-  font-family: 'Inter', Helvetica, Arial, sans-serif !important;
+  font-family: 'Inter', Helvetica, sans-serif !important;
 }
 
 .font-serif, .font-display, .font-heading {

@@ -253,7 +253,7 @@ export const DashboardPage: React.FC = () => {
           {/* 1. Project Overview */}
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <h2 className="text-base font-bold text-slate-900">Project overview</h2>
+              <h2 className="text-base font-bold text-slate-900 font-serif">Project overview</h2>
               <span className="text-xs font-semibold text-slate-400">
                 {selectedProjectId === 'ALL' ? `Showing ${displayProjects.length} Projects` : `1 Project Selected`}
               </span>
@@ -294,7 +294,7 @@ export const DashboardPage: React.FC = () => {
                           </div>
 
                           <div>
-                            <h3 className="font-bold text-base text-slate-900 truncate leading-tight" title={project.name}>
+                            <h3 className="font-bold text-base text-slate-900 truncate leading-tight font-serif" title={project.name}>
                               {project.name}
                             </h3>
                             <p className="text-[11px] font-semibold text-slate-400 truncate mt-0.5">
@@ -342,7 +342,7 @@ export const DashboardPage: React.FC = () => {
           {/* 2. Tasks Overview Data Table */}
           <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-2xs space-y-4">
             <div className="flex items-center justify-between">
-              <h2 className="text-base font-bold text-slate-900">Tasks overview</h2>
+              <h2 className="text-base font-bold text-slate-900 font-serif">Tasks overview</h2>
               <span className="text-xs font-semibold text-slate-400">
                 Showing {Math.min(6, activeTasks.length)} of {activeTasks.length} tasks
               </span>
@@ -426,7 +426,7 @@ export const DashboardPage: React.FC = () => {
         <div className="lg:col-span-2 space-y-5">
           {/* 1. Tasks Progress Donut */}
           <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-2xs space-y-3">
-            <h2 className="text-base font-bold text-slate-900">Tasks progress</h2>
+            <h2 className="text-base font-bold text-slate-900 font-serif">Tasks progress</h2>
 
             <div className="relative h-40 w-full my-1 flex items-center justify-center">
               <ResponsiveContainer width="100%" height="100%">
@@ -488,7 +488,7 @@ export const DashboardPage: React.FC = () => {
           {/* 2. Dedicated Interactive Due Tasks Widget (Today, This Week, Overdue) */}
           <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-2xs space-y-4">
             <div className="flex items-center justify-between">
-              <h2 className="text-base font-bold text-slate-900 flex items-center gap-1.5">
+              <h2 className="text-base font-bold text-slate-900 flex items-center gap-1.5 font-serif">
                 <Hourglass className="w-4 h-4 text-amber-500" />
                 <span>Due Tasks</span>
               </h2>
