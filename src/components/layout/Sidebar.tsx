@@ -64,12 +64,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <img
             src="/favicon.png"
             alt="Deepwoods Leaf Logo"
-            className="w-8 h-8 object-contain transition-opacity duration-200 group-hover:opacity-0"
+            className="w-8 h-8 object-contain transition-opacity duration-200 group-hover:opacity-0 flex-shrink-0"
           />
           <img
             src="/logo.png"
             alt="Deepwoods Logo"
-            className="h-8 w-auto object-contain transition-opacity duration-200 opacity-0 group-hover:opacity-100 absolute left-3"
+            className="h-8 w-auto max-w-[160px] object-contain transition-opacity duration-200 opacity-0 group-hover:opacity-100 absolute inset-0 m-auto"
           />
         </div>
 
