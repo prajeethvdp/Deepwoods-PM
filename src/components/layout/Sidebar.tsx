@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   LayoutDashboard,
   Kanban,
@@ -7,9 +7,11 @@ import {
   UserCheck,
   Users,
   Calendar,
-  Bell,
   LogOut,
   FolderPlus,
+  ChevronDown,
+  ChevronRight,
+  Folder,
 } from 'lucide-react';
 import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
@@ -26,43 +28,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
   currentTab,
   setCurrentTab,
   openNewProjectModal,
-  openNotificationDrawer,
 }) => {
-  const { tasks, emailNotifications } = useData();
+  const { tasks, projects } = useData();
   const { user, logout } = useAuth();
+  const [projectsOpen, setProjectsOpen] = useState(false);
 
   const myTasksCount = useMemo(() => {
     if (!user) return 0;
     return tasks.filter((t) => t.assigneeId === user.id && t.status !== 'Done').length;
   }, [tasks, user]);
-
-  const unreadEmailsCount = useMemo(() => {
-    return emailNotifications.filter((n) => {
-      if (n.read) return false;
-      if (!user) return true;
-      const userEmail = user.email.trim().toLowerCase();
-      const recipientEmail = (n.recipientEmail || '').trim().toLowerCase();
-      const userName = (user.name || '').trim().toLowerCase();
-      const recipientName = (n.recipientName || '').trim().toLowerCase();
-
-      if (recipientEmail && userEmail && recipientEmail === userEmail) return true;
-      if (recipientName && userName && recipientName === userName) return true;
-
-      const userPrefix = userEmail.split('@')[0];
-      const recipientPrefix = recipientEmail.split('@')[0];
-      if (userPrefix && recipientPrefix && userPrefix === recipientPrefix) return true;
-
-      if (n.taskId) {
-        const task = (tasks || []).find((t) => t.id === n.taskId);
-        if (task) {
-          if (task.assigneeId === user.id) return true;
-          if (task.assigneeEmail && task.assigneeEmail.toLowerCase() === userEmail) return true;
-        }
-      }
-
-      return false;
-    }).length;
-  }, [emailNotifications, tasks, user]);
 
   const navItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -78,7 +52,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     <aside className="group w-16 hover:w-56 bg-white rounded-3xl p-3 border border-slate-200/80 shadow-xs flex flex-col justify-between h-full select-none flex-shrink-0 z-40 transition-all duration-300 ease-in-out overflow-hidden">
       {/* Top Section */}
       <div className="flex flex-col gap-4">
-        {/* Top Brand Logo Section */}
+        {/* Brand Logo */}
         <div
           onClick={() => setCurrentTab('dashboard')}
           className="flex items-center justify-center p-2 cursor-pointer transition rounded-2xl hover:bg-slate-50 overflow-hidden min-h-[44px] relative"
@@ -96,10 +70,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
           />
         </div>
 
-        {/* Separator Line */}
+        {/* Separator */}
         <div className="h-px bg-slate-200/80 w-full" />
 
-        {/* Nav Items List */}
+        {/* Nav Items */}
         <div className="flex flex-col gap-1.5">
           {navItems.map((item) => {
             const Icon = item.icon;
@@ -108,16 +82,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <button
                 key={item.id}
                 onClick={() => setCurrentTab(item.id)}
-                className={`relative p-2.5 rounded-2xl transition-all duration-200 flex items-center gap-3 overflow-hidden ${isActive
+                className={`relative p-2.5 rounded-2xl transition-all duration-200 flex items-center gap-3 overflow-hidden ${
+                  isActive
                     ? 'bg-emerald-50 text-emerald-600 border border-emerald-200/80 shadow-2xs font-extrabold'
                     : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100 font-semibold'
-                  }`}
+                }`}
               >
                 <Icon className="w-5 h-5 shrink-0" />
                 <span className="text-xs truncate whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200 delay-75">
                   {item.label}
                 </span>
-
                 {item.badge !== undefined && item.badge > 0 && (
                   <span className="ml-auto bg-emerald-600 text-white rounded-full text-[9px] font-extrabold px-1.5 py-0.5 shadow-xs shrink-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                     {item.badge}
@@ -126,41 +100,64 @@ export const Sidebar: React.FC<SidebarProps> = ({
               </button>
             );
           })}
-
-          {/* Email Notifications Drawer Link */}
-          {openNotificationDrawer && (
-            <button
-              onClick={openNotificationDrawer}
-              className="relative p-2.5 rounded-2xl transition-all duration-200 flex items-center gap-3 text-cyan-700 hover:bg-cyan-50 font-semibold overflow-hidden"
-              title="Email Notifications Log"
-            >
-              <Bell className="w-5 h-5 shrink-0 text-cyan-600" />
-              <span className="text-xs truncate whitespace-nowrap font-bold opacity-0 group-hover:opacity-100 transition-opacity duration-200 delay-75">
-                Email Dispatches
-              </span>
-              {unreadEmailsCount > 0 && (
-                <span className="ml-auto bg-cyan-600 text-white rounded-full text-[9px] font-extrabold px-1.5 py-0.5 shadow-xs animate-pulse shrink-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                  {unreadEmailsCount}
-                </span>
-              )}
-            </button>
-          )}
         </div>
       </div>
 
-      {/* Bottom Actions: New Project & Sign Out */}
+      {/* Bottom: Projects Dropdown + Sign Out */}
       <div className="flex flex-col gap-2 pt-2 border-t border-slate-200/80">
-        <button
-          onClick={openNewProjectModal}
-          className="p-2.5 rounded-2xl bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition font-bold flex items-center gap-3 overflow-hidden"
-          title="New Project"
-        >
-          <FolderPlus className="w-5 h-5 shrink-0 text-emerald-600" />
-          <span className="text-xs truncate whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200 delay-75">
-            New Project
-          </span>
-        </button>
 
+        {/* Projects Dropdown */}
+        <div>
+          <button
+            onClick={() => setProjectsOpen((prev) => !prev)}
+            className="w-full p-2.5 rounded-2xl text-slate-600 hover:bg-slate-100 transition font-semibold flex items-center gap-3 overflow-hidden"
+            title="Projects"
+          >
+            <Folder className="w-5 h-5 shrink-0 text-emerald-600" />
+            <span className="text-xs truncate whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200 delay-75 flex-1 text-left">
+              Projects
+            </span>
+            <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 shrink-0">
+              {projectsOpen
+                ? <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+                : <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
+              }
+            </span>
+          </button>
+
+          {/* Project list — only visible when sidebar is expanded (group-hover) */}
+          {projectsOpen && (
+            <div className="mt-1 ml-2 flex flex-col gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+              {projects.length === 0 ? (
+                <span className="text-[11px] text-slate-400 italic px-3 py-1">No projects yet</span>
+              ) : (
+                projects.map((proj) => (
+                  <div
+                    key={proj.id}
+                    className="flex items-center gap-2 px-2 py-1.5 rounded-xl hover:bg-slate-50 cursor-default"
+                  >
+                    <span
+                      className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                      style={{ backgroundColor: proj.color || '#06B6D4' }}
+                    />
+                    <span className="text-[11px] font-semibold text-slate-700 truncate">
+                      {proj.name}
+                    </span>
+                  </div>
+                ))
+              )}
+              <button
+                onClick={openNewProjectModal}
+                className="flex items-center gap-2 px-2 py-1.5 rounded-xl text-emerald-600 hover:bg-emerald-50 transition font-bold text-[11px] mt-0.5"
+              >
+                <FolderPlus className="w-3.5 h-3.5 shrink-0" />
+                <span>New Project</span>
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Sign Out */}
         {user && (
           <button
             onClick={logout}
