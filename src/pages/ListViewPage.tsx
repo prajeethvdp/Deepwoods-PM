@@ -4,13 +4,11 @@ import { useAuth } from '../context/AuthContext';
 import { Priority, Task, TaskStatus } from '../types';
 import {
   Calendar,
-  User,
   Users,
   CheckCircle2,
   ChevronDown,
   ChevronRight,
   Plus,
-  FileText,
   Target,
   Flag,
   Clock,
@@ -205,12 +203,6 @@ export const ListViewPage: React.FC<ListViewPageProps> = ({
                       </th>
                       <th className="py-3 px-4">
                         <div className="flex items-center gap-1.5">
-                          <FileText className="w-3.5 h-3.5 text-slate-400" />
-                          <span>Description</span>
-                        </div>
-                      </th>
-                      <th className="py-3 px-4">
-                        <div className="flex items-center gap-1.5">
                           <Users className="w-3.5 h-3.5 text-slate-400" />
                           <span>Assignee</span>
                         </div>
@@ -240,7 +232,7 @@ export const ListViewPage: React.FC<ListViewPageProps> = ({
                   <tbody className="divide-y divide-slate-100 font-medium">
                     {groupTasks.length === 0 ? (
                       <tr>
-                        <td colSpan={6} className="py-6 text-center text-slate-400 italic">
+                        <td colSpan={5} className="py-6 text-center text-slate-400 italic">
                           No tasks in {group.title}.
                         </td>
                       </tr>
@@ -268,14 +260,23 @@ export const ListViewPage: React.FC<ListViewPageProps> = ({
                             onClick={() => openTaskDetail(task)}
                             className="hover:bg-slate-50/80 cursor-pointer transition group"
                           >
-                            {/* Task Name */}
-                            <td className="py-3.5 px-5 font-bold text-slate-900 group-hover:text-cyan-600 transition max-w-xs truncate">
-                              {task.title}
-                            </td>
-
-                            {/* Description */}
-                            <td className="py-3.5 px-4 text-slate-500 text-xs max-w-xs truncate">
-                              {task.description || 'No description added'}
+                            {/* Task Name + Project */}
+                            <td className="py-3.5 px-5 max-w-xs">
+                              <div className="font-bold text-slate-900 group-hover:text-cyan-600 transition truncate">
+                                {task.title}
+                              </div>
+                              {(() => {
+                                const proj = projects.find((p) => p.id === task.projectId);
+                                return proj ? (
+                                  <div className="flex items-center gap-1 mt-0.5">
+                                    <span
+                                      className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                                      style={{ backgroundColor: proj.color || '#06B6D4' }}
+                                    />
+                                    <span className="text-[10px] text-slate-400 font-medium truncate">{proj.name}</span>
+                                  </div>
+                                ) : null;
+                              })()}
                             </td>
 
                             {/* Assignee Avatar Stack */}

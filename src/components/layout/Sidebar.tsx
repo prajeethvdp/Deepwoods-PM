@@ -12,6 +12,7 @@ import {
   ChevronDown,
   ChevronRight,
   Folder,
+  Trash2,
 } from 'lucide-react';
 import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
@@ -31,7 +32,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   openNewProjectModal,
   navigateToProject,
 }) => {
-  const { tasks, projects } = useData();
+  const { tasks, projects, deleteProject } = useData();
   const { user, logout } = useAuth();
   const [projectsOpen, setProjectsOpen] = useState(false);
 
@@ -136,16 +137,30 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 projects.map((proj) => (
                   <div
                     key={proj.id}
-                    onClick={() => navigateToProject(proj.id)}
-                    className="flex items-center gap-2 px-2 py-1.5 rounded-xl hover:bg-emerald-50 hover:text-emerald-700 cursor-pointer transition"
+                    className="flex items-center gap-2 px-2 py-1.5 rounded-xl hover:bg-emerald-50 cursor-pointer transition group/proj"
                   >
                     <span
                       className="w-2.5 h-2.5 rounded-full flex-shrink-0"
                       style={{ backgroundColor: proj.color || '#06B6D4' }}
                     />
-                    <span className="text-[11px] font-semibold text-slate-700 truncate">
+                    <span
+                      onClick={() => navigateToProject(proj.id)}
+                      className="text-[11px] font-semibold text-slate-700 truncate flex-1"
+                    >
                       {proj.name}
                     </span>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (window.confirm(`Delete project "${proj.name}"? This cannot be undone.`)) {
+                          deleteProject(proj.id);
+                        }
+                      }}
+                      className="opacity-0 group-hover/proj:opacity-100 p-0.5 rounded text-slate-400 hover:text-red-500 hover:bg-red-50 transition flex-shrink-0"
+                      title="Delete project"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </button>
                   </div>
                 ))
               )}
