@@ -1,0 +1,460 @@
+import React, { useState, useRef, useEffect } from 'react';
+import {
+  Plus,
+  Search,
+  RefreshCw,
+  Folder,
+  LogOut,
+  Filter,
+  Bell,
+  ChevronDown,
+} from 'lucide-react';
+import { useData } from '../../context/DataContext';
+import { useAuth } from '../../context/AuthContext';
+import { Priority, TaskStatus } from '../../types';
+import { PRIORITY_CONFIG, STATUS_CONFIG } from '../../lib/constants';
+import { subDays, startOfMonth, endOfMonth } from 'date-fns';
+import { toYYYYMMDD } from '../../lib/dateUtils';
+
+interface HeaderProps {
+  currentTab: string;
+  openNewTaskModal: () => void;
+  openNotificationDrawer: () => void;
+}
+
+export function getDatePresetOptions() {
+  return [
+    { key: 'ALL', label: 'Date: All Time' },
+    { key: 'TODAY', label: 'Date: Today' },
+    { key: 'YESTERDAY', label: 'Date: Yesterday' },
+    { key: 'LAST_7_DAYS', label: 'Date: Last 7 Days' },
+    { key: 'LAST_30_DAYS', label: 'Date: Last 30 Days' },
+    { key: 'THIS_MONTH', label: 'Date: This Month' },
+    { key: 'CUSTOM', label: 'Date: Custom Range...' },
+  ];
+}
+
+export const Header: React.FC<HeaderProps> = ({
+  currentTab,
+  openNewTaskModal,
+  openNotificationDrawer,
+}) => {
+  const {
+    tasks,
+    projects,
+    selectedProjectId,
+    setSelectedProjectId,
+    teamMembers,
+    emailNotifications,
+    filterOptions,
+    setFilterOptions,
+    isSyncing,
+    syncWithGoogleSheets,
+  } = useData();
+  const { user, logout } = useAuth();
+
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const filterPopoverRef = useRef<HTMLDivElement>(null);
+
+  const unreadCount = emailNotifications.filter((n) => {
+    if (n.read) return false;
+    if (!user) return true;
+    const userEmail = user.email.trim().toLowerCase();
+    const recipientEmail = (n.recipientEmail || '').trim().toLowerCase();
+    const userName = (user.name || '').trim().toLowerCase();
+    const recipientName = (n.recipientName || '').trim().toLowerCase();
+
+    if (recipientEmail && userEmail && recipientEmail === userEmail) return true;
+    if (recipientName && userName && recipientName === userName) return true;
+
+    const userPrefix = userEmail.split('@')[0];
+    const recipientPrefix = recipientEmail.split('@')[0];
+    if (userPrefix && recipientPrefix && userPrefix === recipientPrefix) return true;
+
+    if (n.taskId) {
+      const task = (tasks || []).find((t) => t.id === n.taskId);
+      if (task) {
+        if (task.assigneeId === user.id) return true;
+        if (task.assigneeEmail && task.assigneeEmail.toLowerCase() === userEmail) return true;
+      }
+    }
+
+    return false;
+  }).length;
+
+  // Close popover on outside click
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (filterPopoverRef.current && !filterPopoverRef.current.contains(e.target as Node)) {
+        setIsFilterOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const isMyTasksView = currentTab === 'my-tasks';
+  const dateOptions = getDatePresetOptions();
+
+  // Active Filter Count Calculation
+  let activeFilterCount = 0;
+  if (filterOptions.assigneeId !== 'ALL' && !isMyTasksView) activeFilterCount++;
+  if (filterOptions.priority !== 'All') activeFilterCount++;
+  if (filterOptions.status !== 'All') activeFilterCount++;
+  if (filterOptions.myTasksOnly && !isMyTasksView) activeFilterCount++;
+  if (filterOptions.datePreset !== 'ALL' || filterOptions.startDate || filterOptions.endDate) activeFilterCount++;
+
+  const resetFilters = () => {
+    setFilterOptions({
+      searchQuery: '',
+      projectId: 'ALL',
+      assigneeId: 'ALL',
+      priority: 'All',
+      status: 'All',
+      myTasksOnly: false,
+      datePreset: 'ALL',
+      startDate: '',
+      endDate: '',
+    });
+  };
+
+  const handleDatePresetChange = (preset: string) => {
+    const today = new Date();
+    let start = '';
+    let end = '';
+
+    if (preset === 'TODAY') {
+      start = toYYYYMMDD(today);
+      end = toYYYYMMDD(today);
+    } else if (preset === 'YESTERDAY') {
+      const yest = subDays(today, 1);
+      start = toYYYYMMDD(yest);
+      end = toYYYYMMDD(yest);
+    } else if (preset === 'LAST_7_DAYS') {
+      start = toYYYYMMDD(subDays(today, 6));
+      end = toYYYYMMDD(today);
+    } else if (preset === 'LAST_30_DAYS') {
+      start = toYYYYMMDD(subDays(today, 29));
+      end = toYYYYMMDD(today);
+    } else if (preset === 'THIS_MONTH') {
+      start = toYYYYMMDD(startOfMonth(today));
+      end = toYYYYMMDD(endOfMonth(today));
+    }
+
+    setFilterOptions((prev) => ({
+      ...prev,
+      datePreset: preset,
+      startDate: start,
+      endDate: end,
+    }));
+  };
+
+  const getTabTitle = () => {
+    switch (currentTab) {
+      case 'dashboard':
+        return 'Dashboard';
+      case 'kanban':
+        return 'Kanban Board';
+      case 'gantt':
+        return 'Gantt Timeline';
+      case 'list':
+        return 'Task List';
+      case 'calendar':
+        return 'Calendar Schedule';
+      case 'my-tasks':
+        return 'My Assigned Tasks';
+      case 'team':
+        return 'Team Settings';
+      default:
+        return 'Project Management';
+    }
+  };
+
+  return (
+    <header className="bg-white rounded-3xl p-3 px-5 border border-slate-200/80 shadow-xs flex items-center justify-between gap-4 sticky top-0 z-30 select-none">
+      {/* Left: Page Title & Project Dropdown */}
+      <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2">
+          <span className="font-extrabold text-base text-slate-900 tracking-tight">
+            {getTabTitle()}
+          </span>
+        </div>
+
+        {/* Project Switcher Dropdown */}
+        <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-2xl text-xs font-semibold text-slate-700">
+          <Folder className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0" />
+          <select
+            value={selectedProjectId}
+            onChange={(e) => setSelectedProjectId(e.target.value)}
+            className="bg-transparent text-slate-900 font-bold focus:outline-none cursor-pointer pr-1"
+          >
+            <option value="ALL">All Projects ({projects.length})</option>
+            {projects.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      {/* Right: Global Actions (Search, Notifications, Filters, Sync, + New Task, Profile) */}
+      <div className="flex items-center gap-3">
+        {/* Search Bar */}
+        <div className="relative hidden md:block w-48">
+          <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+          <input
+            type="text"
+            placeholder="Search tasks..."
+            value={filterOptions.searchQuery}
+            onChange={(e) =>
+              setFilterOptions((prev) => ({ ...prev, searchQuery: e.target.value }))
+            }
+            className="w-full pl-8 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-full text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-emerald-500 transition"
+          />
+        </div>
+
+        {/* Notification Bell Button */}
+        <button
+          onClick={openNotificationDrawer}
+          className="relative p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-full transition"
+          title="Email Notifications & Dispatch Log"
+        >
+          <Bell className="w-4 h-4 text-cyan-600" />
+          {unreadCount > 0 && (
+            <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-cyan-600 text-white rounded-full text-[9px] font-black flex items-center justify-center animate-pulse border border-white">
+              {unreadCount}
+            </span>
+          )}
+        </button>
+
+        {/* Filters Button with Popover */}
+        <div className="relative" ref={filterPopoverRef}>
+          <button
+            onClick={() => setIsFilterOpen(!isFilterOpen)}
+            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition ${activeFilterCount > 0 || isFilterOpen
+                ? 'bg-emerald-50 text-emerald-700 border border-emerald-300 shadow-2xs'
+                : 'bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200/60'
+              }`}
+          >
+            <Filter className="w-3.5 h-3.5 text-emerald-600" />
+            <span>Filters</span>
+            {activeFilterCount > 0 && (
+              <span className="w-4 h-4 bg-emerald-600 text-white rounded-full text-[9px] font-extrabold flex items-center justify-center">
+                {activeFilterCount}
+              </span>
+            )}
+            <ChevronDown className="w-3 h-3 text-slate-400" />
+          </button>
+
+          {/* Filters Dropdown Popover Card */}
+          {isFilterOpen && (
+            <div className="absolute right-0 top-full mt-2 w-80 sm:w-96 bg-white border border-slate-200/90 rounded-3xl p-5 shadow-xl z-50 animate-in fade-in zoom-in-95 duration-150 text-xs">
+              <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
+                <div className="flex items-center gap-1.5 font-extrabold text-sm text-slate-900">
+                  <Filter className="w-4 h-4 text-emerald-600" />
+                  <span>Filter Tasks</span>
+                </div>
+                {activeFilterCount > 0 && (
+                  <button
+                    onClick={resetFilters}
+                    className="text-[11px] font-bold text-rose-600 hover:text-rose-700 transition"
+                  >
+                    Reset All
+                  </button>
+                )}
+              </div>
+
+              <div className="space-y-4">
+                {/* 1. Date Range Filter */}
+                <div className="space-y-1.5">
+                  <label className="block text-[11px] font-extrabold text-slate-500 uppercase tracking-wider">
+                    Date Range
+                  </label>
+                  <select
+                    value={filterOptions.datePreset || 'ALL'}
+                    onChange={(e) => handleDatePresetChange(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 text-slate-800 font-bold px-3 py-2 rounded-2xl focus:outline-none focus:border-emerald-500 cursor-pointer"
+                  >
+                    {dateOptions.map((opt) => (
+                      <option key={opt.key} value={opt.key}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
+
+                  {(filterOptions.datePreset === 'CUSTOM' || (filterOptions.datePreset !== 'ALL' && filterOptions.startDate)) && (
+                    <div className="flex items-center gap-2 pt-1">
+                      <input
+                        type="date"
+                        value={filterOptions.startDate || ''}
+                        onChange={(e) =>
+                          setFilterOptions((prev) => ({
+                            ...prev,
+                            datePreset: 'CUSTOM',
+                            startDate: e.target.value,
+                          }))
+                        }
+                        className="w-1/2 bg-slate-50 border border-slate-200 rounded-xl px-2 py-1 text-xs text-slate-800 font-semibold focus:outline-none"
+                      />
+                      <span className="text-slate-400 font-bold">—</span>
+                      <input
+                        type="date"
+                        value={filterOptions.endDate || ''}
+                        onChange={(e) =>
+                          setFilterOptions((prev) => ({
+                            ...prev,
+                            datePreset: 'CUSTOM',
+                            endDate: e.target.value,
+                          }))
+                        }
+                        className="w-1/2 bg-slate-50 border border-slate-200 rounded-xl px-2 py-1 text-xs text-slate-800 font-semibold focus:outline-none"
+                      />
+                    </div>
+                  )}
+                </div>
+
+                {/* 2. Assignee Filter */}
+                {!isMyTasksView && (
+                  <div className="space-y-1.5">
+                    <label className="block text-[11px] font-extrabold text-slate-500 uppercase tracking-wider">
+                      Assignee
+                    </label>
+                    <select
+                      value={filterOptions.assigneeId}
+                      onChange={(e) =>
+                        setFilterOptions((prev) => ({
+                          ...prev,
+                          assigneeId: e.target.value,
+                        }))
+                      }
+                      className="w-full bg-slate-50 border border-slate-200 text-slate-800 font-bold px-3 py-2 rounded-2xl focus:outline-none focus:border-emerald-500 cursor-pointer"
+                    >
+                      <option value="ALL">All Team Members ({teamMembers.length})</option>
+                      {teamMembers.map((member) => (
+                        <option key={member.id} value={member.id}>
+                          {member.name} ({member.role || 'Member'})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                {/* 3. Priority Filter */}
+                <div className="space-y-1.5">
+                  <label className="block text-[11px] font-extrabold text-slate-500 uppercase tracking-wider">
+                    Priority
+                  </label>
+                  <select
+                    value={filterOptions.priority}
+                    onChange={(e) =>
+                      setFilterOptions((prev) => ({
+                        ...prev,
+                        priority: e.target.value as Priority | 'All',
+                      }))
+                    }
+                    className="w-full bg-slate-50 border border-slate-200 text-slate-800 font-bold px-3 py-2 rounded-2xl focus:outline-none focus:border-emerald-500 cursor-pointer"
+                  >
+                    <option value="All">Priority: All</option>
+                    {(Object.keys(PRIORITY_CONFIG) as Priority[]).map((p) => (
+                      <option key={p} value={p}>
+                        Priority: {p}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* 4. Status Filter */}
+                <div className="space-y-1.5">
+                  <label className="block text-[11px] font-extrabold text-slate-500 uppercase tracking-wider">
+                    Workflow Status
+                  </label>
+                  <select
+                    value={filterOptions.status}
+                    onChange={(e) =>
+                      setFilterOptions((prev) => ({
+                        ...prev,
+                        status: e.target.value as TaskStatus | 'All',
+                      }))
+                    }
+                    className="w-full bg-slate-50 border border-slate-200 text-slate-800 font-bold px-3 py-2 rounded-2xl focus:outline-none focus:border-emerald-500 cursor-pointer"
+                  >
+                    <option value="All">Status: All</option>
+                    {(Object.keys(STATUS_CONFIG) as TaskStatus[]).map((s) => (
+                      <option key={s} value={s}>
+                        Status: {s}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* 5. My Tasks Toggle Switch */}
+                {!isMyTasksView && user && (
+                  <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
+                    <span className="text-xs font-bold text-slate-700">My Assigned Tasks Only</span>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setFilterOptions((prev) => ({
+                          ...prev,
+                          myTasksOnly: !prev.myTasksOnly,
+                        }))
+                      }
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${filterOptions.myTasksOnly ? 'bg-emerald-600' : 'bg-slate-200'
+                        }`}
+                    >
+                      <span
+                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${filterOptions.myTasksOnly ? 'translate-x-6' : 'translate-x-1'
+                          }`}
+                      />
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Sync Button */}
+        <button
+          onClick={syncWithGoogleSheets}
+          disabled={isSyncing}
+          className="p-2 text-slate-500 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 rounded-full transition"
+          title="Sync with Sheets"
+        >
+          <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin text-emerald-600' : ''}`} />
+        </button>
+
+        {/* Primary Action Button: New Task */}
+        <button
+          onClick={openNewTaskModal}
+          className="flex items-center gap-1.5 px-4 py-2 bg-[#059669] hover:bg-[#047857] text-white rounded-full text-xs font-bold shadow-xs transition transform active:scale-95"
+        >
+          <Plus className="w-4 h-4" />
+          <span>New Task</span>
+        </button>
+
+        {/* User Badge Avatar */}
+        {user && (
+          <div className="flex items-center gap-2 pl-2 border-l border-slate-200">
+            <div
+              className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold shadow-xs cursor-pointer ring-2 ring-white"
+              style={{ backgroundColor: user.color }}
+              title={`${user.name} (${user.role})`}
+            >
+              {user.name.charAt(0)}
+            </div>
+
+            <button
+              onClick={logout}
+              className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-full transition"
+              title="Sign Out"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+      </div>
+    </header>
+  );
+};
