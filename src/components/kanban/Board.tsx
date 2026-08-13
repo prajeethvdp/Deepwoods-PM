@@ -106,7 +106,7 @@ export const Board: React.FC<BoardProps> = ({ openTaskModalWithStatus, isMyTasks
 
   return (
     <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-      <div className="flex gap-4 overflow-x-auto p-6 items-start h-full">
+      <div className="grid grid-cols-4 gap-4 px-5 py-4 h-full min-h-0">
         {KANBAN_COLUMNS.map((columnStatus) => {
           const columnTasks = filteredTasks.filter((t) => t.status === columnStatus);
           return (

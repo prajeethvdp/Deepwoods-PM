@@ -1,28 +1,36 @@
 import React from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Calendar, CheckCircle2, CheckSquare, Sparkles } from 'lucide-react';
+import { Clock, Paperclip, MessageSquare, CheckSquare } from 'lucide-react';
 import { Task } from '../../types';
 import { useData } from '../../context/DataContext';
-import { PRIORITY_CONFIG } from '../../lib/constants';
-import { isBefore, startOfDay } from 'date-fns';
-import { toYYYYMMDD, formatDateRangeDisplay, formatDisplayDate } from '../../lib/dateUtils';
+import { differenceInDays, startOfDay, parseISO } from 'date-fns';
 
 interface TaskCardProps {
   task: Task;
 }
 
+const getPriorityStyle = (priority: string): { bg: string; text: string; border: string; label: string } => {
+  switch (priority) {
+    case 'Urgent':
+      return { bg: 'bg-red-50', text: 'text-red-600', border: 'border border-red-200', label: 'Urgent' };
+    case 'High':
+      return { bg: 'bg-red-50', text: 'text-red-500', border: 'border border-red-200', label: 'High' };
+    case 'Medium':
+      return { bg: 'bg-amber-50', text: 'text-amber-600', border: 'border border-amber-200', label: 'Medium' };
+    case 'Low':
+      return { bg: 'bg-green-50', text: 'text-green-600', border: 'border border-green-200', label: 'Low' };
+    default:
+      return { bg: 'bg-slate-100', text: 'text-slate-500', border: 'border border-slate-200', label: priority };
+  }
+};
+
 export const TaskCard: React.FC<TaskCardProps> = ({ task }) => {
   const { openTaskDetail, projects, teamMembers } = useData();
 
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: task.id });
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: task.id,
+  });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -32,16 +40,35 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task }) => {
 
   const project = projects.find((p) => p.id === task.projectId);
   const assignee = teamMembers.find((m) => m.id === task.assigneeId);
-  const priorityInfo = PRIORITY_CONFIG[task.priority] || PRIORITY_CONFIG.Medium;
+  const priorityStyle = getPriorityStyle(task.priority);
 
   const today = startOfDay(new Date());
-  const dueYmd = toYYYYMMDD(task.dueDate);
-  const taskDueDate = dueYmd ? startOfDay(new Date(dueYmd)) : null;
-  const isOverdue = taskDueDate && isBefore(taskDueDate, today) && task.status !== 'Done';
 
-  const isDone = task.status === 'Done';
-  const completedDateText = isDone ? formatDisplayDate(task.dueDate || task.updatedAt || task.startDate) : '';
-  const dateRangeText = formatDateRangeDisplay(task.startDate, task.dueDate);
+  // Days remaining calculation
+  let daysLabel = '';
+  let isOverdue = false;
+  if (task.dueDate) {
+    try {
+      const due = startOfDay(parseISO(task.dueDate));
+      const diff = differenceInDays(due, today);
+      if (task.status === 'Done') {
+        daysLabel = 'Done';
+      } else if (diff < 0) {
+        daysLabel = `${Math.abs(diff)}d overdue`;
+        isOverdue = true;
+      } else if (diff === 0) {
+        daysLabel = 'Due today';
+      } else {
+        daysLabel = `${diff}d left`;
+      }
+    } catch {
+      daysLabel = '';
+    }
+  }
+
+  const attachCount = task.attachments?.length || 0;
+  const subtaskCount = task.subtasks?.length || 0;
+  const completedSubtasks = task.subtasks?.filter((s) => s.completed).length || 0;
 
   return (
     <div
@@ -50,103 +77,81 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task }) => {
       {...attributes}
       {...listeners}
       onClick={() => openTaskDetail(task)}
-      className={`group bg-white rounded-xl p-3.5 border transition-all duration-150 cursor-pointer shadow-xs hover:shadow-md select-none ${
-        isOverdue
-          ? 'border-l-4 border-l-red-500 border-r-slate-200 border-t-slate-200 border-b-slate-200 bg-red-50/10'
-          : isDone
-          ? 'border-emerald-200/80 hover:border-emerald-300 bg-emerald-50/5'
-          : 'border-slate-200 hover:border-slate-300'
-      }`}
+      className="bg-white rounded-lg p-3.5 border border-slate-200/60 shadow-xs hover:shadow-sm transition-all duration-150 cursor-pointer select-none group"
     >
-      {/* Top: Project Indicator & Priority Badge */}
-      <div className="flex items-center justify-between gap-2 mb-2">
-        <div className="flex items-center gap-1.5 min-w-0">
-          <span
-            className="w-2 h-2 rounded-full flex-shrink-0"
-            style={{ backgroundColor: project?.color || '#06B6D4' }}
-          />
-          <span className="text-[10px] font-semibold text-slate-500 truncate">
-            {project?.name || 'Project'}
-          </span>
-        </div>
-
-        <span
-          className={`inline-flex items-center justify-center text-[10px] font-semibold px-2 py-0.5 rounded-full border whitespace-nowrap leading-none ${priorityInfo.bg} ${priorityInfo.text} ${priorityInfo.border}`}
-        >
-          {task.priority}
+      {/* Row 1: Priority + Days */}
+      <div className="flex items-center justify-between mb-2.5">
+        <span className={`text-[10px] font-bold px-2 py-0.5 rounded leading-none ${priorityStyle.bg} ${priorityStyle.text} ${priorityStyle.border}`}>
+          {priorityStyle.label}
         </span>
+
+        {daysLabel && (
+          <span className={`flex items-center gap-1 text-[10px] font-semibold ${
+            isOverdue ? 'text-red-500' : task.status === 'Done' ? 'text-emerald-600' : 'text-slate-400'
+          }`}>
+            <Clock className="w-3 h-3 flex-shrink-0" />
+            {daysLabel}
+          </span>
+        )}
       </div>
 
       {/* Title */}
-      <h3 className="font-semibold text-xs text-slate-900 leading-snug mb-2 group-hover:text-cyan-600 transition">
+      <h3 className="font-bold text-[13px] text-slate-900 leading-snug mb-1.5 group-hover:text-cyan-700 transition line-clamp-2">
         {task.title}
       </h3>
 
-      {/* Subtasks Progress Bar & Story Points */}
-      {(task.storyPoints || (task.subtasks && task.subtasks.length > 0)) && (
-        <div className="space-y-1 mb-2.5">
-          {task.subtasks && task.subtasks.length > 0 && (
-            <div className="space-y-1">
-              <div className="flex items-center justify-between text-[10px] text-slate-500 font-medium">
-                <span className="flex items-center gap-1">
-                  <CheckSquare className="w-3 h-3 text-cyan-600" />
-                  {task.subtasks.filter((s) => s.completed).length}/{task.subtasks.length} subtasks
-                </span>
-                <span>
-                  {Math.round((task.subtasks.filter((s) => s.completed).length / task.subtasks.length) * 100)}%
-                </span>
-              </div>
-              <div className="w-full h-1 bg-slate-100 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-cyan-500 rounded-full"
-                  style={{
-                    width: `${(task.subtasks.filter((s) => s.completed).length / task.subtasks.length) * 100}%`,
-                  }}
-                />
-              </div>
-            </div>
-          )}
-          {task.storyPoints && (
-            <div className="flex items-center justify-end">
-              <span className="text-[10px] font-extrabold px-1.5 py-0.5 rounded bg-cyan-50 text-cyan-700 border border-cyan-200/60 flex items-center gap-1">
-                <Sparkles className="w-2.5 h-2.5 text-cyan-500" />
-                {task.storyPoints} {task.storyPoints === 1 ? 'pt' : 'pts'}
-              </span>
-            </div>
-          )}
+      {/* Description */}
+      {task.description && (
+        <p className="text-[11px] text-slate-500 leading-relaxed mb-2.5 line-clamp-2">
+          {task.description}
+        </p>
+      )}
+
+      {/* Subtask progress bar */}
+      {subtaskCount > 0 && (
+        <div className="mb-2.5">
+          <div className="flex items-center justify-between text-[10px] text-slate-400 mb-1">
+            <span className="flex items-center gap-1">
+              <CheckSquare className="w-3 h-3 text-cyan-500" />
+              {completedSubtasks}/{subtaskCount} subtasks
+            </span>
+            <span>{Math.round((completedSubtasks / subtaskCount) * 100)}%</span>
+          </div>
+          <div className="w-full h-1 bg-slate-100 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-cyan-500 rounded-full"
+              style={{ width: `${(completedSubtasks / subtaskCount) * 100}%` }}
+            />
+          </div>
         </div>
       )}
 
-      {/* Footer: Date & Assignee Avatar */}
-      <div className="flex items-center justify-between text-[11px] text-slate-500 pt-2 border-t border-slate-100 gap-2">
-        <div className="flex items-center gap-1 min-w-0 truncate">
-          {isDone ? (
-            <>
-              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0" />
-              <span className="truncate text-[10px] text-emerald-700 font-semibold">
-                Completed: {completedDateText}
-              </span>
-            </>
-          ) : (
-            <>
-              <Calendar className={`w-3 h-3 flex-shrink-0 ${isOverdue ? 'text-red-500' : 'text-slate-400'}`} />
-              <span className={`truncate text-[10px] ${isOverdue ? 'text-red-600 font-bold' : 'text-slate-600 font-medium'}`}>
-                {dateRangeText}
-              </span>
-              {isOverdue && (
-                <span className="bg-red-100 text-red-700 text-[9px] font-extrabold px-1.5 py-0.2 rounded-full uppercase ml-1 flex-shrink-0">
-                  Overdue
-                </span>
-              )}
-            </>
-          )}
+      {/* Project indicator */}
+      {project && (
+        <div className="flex items-center gap-1.5 mb-2.5">
+          <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: project.color || '#06B6D4' }} />
+          <span className="text-[10px] font-semibold text-slate-400 truncate">{project.name}</span>
+        </div>
+      )}
+
+      {/* Footer: Attach count + Subtask count + Assignee */}
+      <div className="flex items-center justify-between pt-2.5 border-t border-slate-100">
+        <div className="flex items-center gap-3 text-[11px] text-slate-400 font-semibold">
+          <span className="flex items-center gap-1">
+            <Paperclip className="w-3 h-3" />
+            {attachCount}
+          </span>
+          <span className="flex items-center gap-1">
+            <MessageSquare className="w-3 h-3" />
+            {subtaskCount}
+          </span>
         </div>
 
         {assignee && (
           <div
-            className="w-6 h-6 rounded-full flex items-center justify-center text-white text-[10px] font-bold shadow-xs border border-white flex-shrink-0"
+            className="w-6 h-6 rounded-full flex items-center justify-center text-white text-[10px] font-bold border-2 border-white shadow-xs flex-shrink-0"
             style={{ backgroundColor: assignee.color }}
-            title={`Assigned to ${assignee.name}`}
+            title={assignee.name}
           >
             {assignee.name.charAt(0)}
           </div>
@@ -155,4 +160,3 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task }) => {
     </div>
   );
 };
-

@@ -43,7 +43,11 @@ const MainApp: React.FC = () => {
       case 'dashboard':
         return <DashboardPage />;
       case 'kanban':
-        return <Board openTaskModalWithStatus={openTaskModalWithStatus} />;
+        return (
+          <div className="h-full overflow-hidden">
+            <Board openTaskModalWithStatus={openTaskModalWithStatus} />
+          </div>
+        );
       case 'gantt':
         return <GanttChart isMyTasksView={false} />;
       case 'list':
@@ -51,11 +55,19 @@ const MainApp: React.FC = () => {
       case 'calendar':
         return <CalendarView onAddDateTask={(dateStr) => openTaskModalWithStatus('To Do', dateStr)} />;
       case 'my-tasks':
-        return <Board openTaskModalWithStatus={openTaskModalWithStatus} isMyTasksView={true} />;
+        return (
+          <div className="h-full overflow-hidden">
+            <Board openTaskModalWithStatus={openTaskModalWithStatus} isMyTasksView={true} />
+          </div>
+        );
       case 'team':
         return <TeamPage />;
       default:
-        return <Board openTaskModalWithStatus={openTaskModalWithStatus} />;
+        return (
+          <div className="h-full overflow-hidden">
+            <Board openTaskModalWithStatus={openTaskModalWithStatus} />
+          </div>
+        );
     }
   };
 

@@ -10,8 +10,6 @@ import {
   ChevronDown,
   ChevronRight,
   Plus,
-  Paperclip,
-  MoreHorizontal,
   FileText,
   Target,
   Flag,
@@ -235,12 +233,6 @@ export const ListViewPage: React.FC<ListViewPageProps> = ({
                           <span>Priority</span>
                         </div>
                       </th>
-                      <th className="py-3 px-3 text-center">
-                        <div className="flex items-center justify-center gap-1">
-                          <Paperclip className="w-3.5 h-3.5 text-slate-400" />
-                          <span>Attach</span>
-                        </div>
-                      </th>
                       <th className="py-3 px-4 text-right"></th>
                     </tr>
                   </thead>
@@ -248,7 +240,7 @@ export const ListViewPage: React.FC<ListViewPageProps> = ({
                   <tbody className="divide-y divide-slate-100 font-medium">
                     {groupTasks.length === 0 ? (
                       <tr>
-                        <td colSpan={8} className="py-6 text-center text-slate-400 italic">
+                        <td colSpan={6} className="py-6 text-center text-slate-400 italic">
                           No tasks in {group.title}.
                         </td>
                       </tr>
@@ -327,40 +319,6 @@ export const ListViewPage: React.FC<ListViewPageProps> = ({
                                 <Flag className="w-3 h-3 fill-current stroke-none" />
                                 <span>{task.priority}</span>
                               </span>
-                            </td>
-
-                            {/* Clickable Real Attachments Button */}
-                            <td className="py-3.5 px-3 text-center">
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  openTaskDetail(task);
-                                }}
-                                className={`inline-flex items-center gap-1.5 text-[11px] px-2.5 py-1 rounded-full font-bold transition border ${
-                                  attachCount > 0
-                                    ? 'bg-cyan-50 text-cyan-700 border-cyan-200 hover:bg-cyan-100'
-                                    : 'bg-slate-50 text-slate-400 border-slate-200 hover:bg-slate-100 hover:text-slate-700'
-                                }`}
-                                title="View or upload attachments"
-                              >
-                                <Paperclip className="w-3.5 h-3.5" />
-                                <span>{attachCount > 0 ? `${attachCount} file${attachCount > 1 ? 's' : ''}` : 'Attach'}</span>
-                              </button>
-                            </td>
-
-                            {/* Action Menu */}
-                            <td className="py-3.5 px-4 text-right">
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  openTaskDetail(task);
-                                }}
-                                className="p-1 rounded-md text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition"
-                              >
-                                <MoreHorizontal className="w-4 h-4" />
-                              </button>
                             </td>
                           </tr>
                         );
