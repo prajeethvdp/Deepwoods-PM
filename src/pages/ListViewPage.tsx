@@ -279,16 +279,18 @@ export const ListViewPage: React.FC<ListViewPageProps> = ({
                               })()}
                             </td>
 
-                            {/* Assignee Avatar Stack */}
+                            {/* Assignee */}
                             <td className="py-3.5 px-4">
                               {assignee ? (
-                                <div className="flex items-center -space-x-1.5">
+                                <div className="flex items-center gap-2">
                                   <span
-                                    className="w-6 h-6 rounded-full text-white text-[10px] font-bold flex items-center justify-center ring-2 ring-white shadow-2xs"
+                                    className="w-6 h-6 rounded-full text-white text-[10px] font-bold flex items-center justify-center ring-2 ring-white shadow-2xs flex-shrink-0"
                                     style={{ backgroundColor: assignee.color }}
-                                    title={assignee.name}
                                   >
                                     {assignee.name.charAt(0)}
+                                  </span>
+                                  <span className="text-xs font-semibold text-slate-700 truncate">
+                                    {assignee.name}
                                   </span>
                                 </div>
                               ) : (
