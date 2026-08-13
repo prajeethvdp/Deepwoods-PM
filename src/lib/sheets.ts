@@ -104,7 +104,10 @@ export async function syncAllWithAppsScript(): Promise<{
 
   try {
     const res = await fetch(`${scriptUrl}?action=getAll&_t=${Date.now()}`);
-    if (!res.ok) throw new Error(`Apps Script HTTP ${res.status}`);
+    if (!res.ok) {
+      console.info(`[AppsScript] Sync deferred (HTTP ${res.status}), using local storage cache.`);
+      return null;
+    }
     const result = await res.json();
     if (result.success && result.data) {
       const normalizedTasks = (result.data.tasks || []).map(normalizeTaskDates);
@@ -117,9 +120,10 @@ export async function syncAllWithAppsScript(): Promise<{
         tasks: normalizedTasks,
       };
     }
-  } catch (err) {
-    console.warn('Google Apps Script sync warning (using local storage cache):', err);
+  } catch {
+    // Graceful offline fallback to local storage cache
   }
+  return null;
   return null;
 }
 
