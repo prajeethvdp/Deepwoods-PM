@@ -164,27 +164,28 @@ export const DetailPanel: React.FC = () => {
             <span className="text-xs font-bold text-slate-700 truncate">
               {currentProject?.name || 'Project Task'}
             </span>
+          </div>
+
+          <div className="flex items-center gap-3 shrink-0">
             {isOverdue && (
-              <span className="inline-flex items-center gap-1 bg-white text-rose-600 border border-slate-900 text-[10px] font-extrabold px-2 py-0.5 rounded-none uppercase shrink-0">
+              <span className="inline-flex items-center gap-1 bg-white text-rose-600 border border-slate-200 text-[10px] font-extrabold px-2.5 py-1 rounded-none uppercase shrink-0">
                 <AlertCircle className="w-3 h-3 text-rose-600" />
                 <span>Overdue</span>
               </span>
             )}
-          </div>
 
-          <div className="flex items-center gap-3 shrink-0">
             {/* Send Deadline Reminder Email Action Button (Admin & PM only) */}
             {!isEmployee && (
               <button
                 onClick={handleSendReminder}
-                className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-none text-xs font-bold transition whitespace-nowrap border border-slate-900 shadow-2xs ${
+                className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-none text-xs font-bold transition whitespace-nowrap border shadow-2xs ${
                   reminderSent
-                    ? 'bg-emerald-50 text-emerald-700'
-                    : 'bg-white hover:bg-slate-50 text-slate-900'
+                    ? 'bg-emerald-50 text-emerald-700 border-emerald-300'
+                    : 'bg-white hover:bg-slate-50 text-slate-800 border-slate-200 hover:border-slate-300'
                 }`}
                 title="Send Deadline Reminder Email to Assignee"
               >
-                {reminderSent ? <MailCheck className="w-3.5 h-3.5 text-emerald-600" /> : <Bell className="w-3.5 h-3.5 text-slate-800 shrink-0" />}
+                {reminderSent ? <MailCheck className="w-3.5 h-3.5 text-emerald-600" /> : <Bell className="w-3.5 h-3.5 text-slate-600 shrink-0" />}
                 <span>{reminderSent ? 'Reminder Sent!' : 'Remind Deadline'}</span>
               </button>
             )}
