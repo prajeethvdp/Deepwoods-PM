@@ -100,7 +100,7 @@ function doPost(e) {
         return deleteRowById(spreadsheet, SHEET_NAMES.PROJECTS, payload.id);
 
       case 'addTeamMember':
-        return appendRow(spreadsheet, SHEET_NAMES.TEAM, teamToRow(payload.data));
+        return addOrUpdateTeamMember(spreadsheet, payload.data);
 
       case 'updateTeamMember':
         return updateRowById(spreadsheet, SHEET_NAMES.TEAM, payload.data.id, teamToRow(payload.data));
@@ -375,6 +375,29 @@ function updateRowById(spreadsheet, sheetName, id, rowValues) {
   }
   sheet.appendRow(rowValues);
   return createJsonResponse({ success: true, message: 'ID not found, row appended to ' + sheetName });
+}
+
+function addOrUpdateTeamMember(spreadsheet, memberData) {
+  const sheet = getSheetByNameFlexible(spreadsheet, SHEET_NAMES.TEAM);
+  if (!sheet) return createJsonResponse({ success: false, error: 'Sheet not found: ' + SHEET_NAMES.TEAM });
+
+  const rows = sheet.getDataRange().getValues();
+  const normalizedEmail = String(memberData.email || '').trim().toLowerCase();
+  const rowValues = teamToRow(memberData);
+
+  if (normalizedEmail) {
+    for (let i = 1; i < rows.length; i++) {
+      const existingEmail = String(rows[i][3] || '').trim().toLowerCase();
+      if (existingEmail === normalizedEmail) {
+        const range = sheet.getRange(i + 1, 1, 1, rowValues.length);
+        range.setValues([rowValues]);
+        return createJsonResponse({ success: true, message: 'Updated existing team member: ' + normalizedEmail });
+      }
+    }
+  }
+
+  sheet.appendRow(rowValues);
+  return createJsonResponse({ success: true, message: 'Appended new team member: ' + normalizedEmail });
 }
 
 function resetTeamMemberPassword(spreadsheet, email, newPassword) {

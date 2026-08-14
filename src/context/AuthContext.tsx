@@ -150,32 +150,56 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         if (res.ok) {
           const json = await res.json();
-          if (json.success && Array.isArray(json.data) && json.data.length > 0) {
-            team = json.data.map((m: any) => {
+            // Deduplicate team members by email (keep highest privilege role / primary row)
+            const uniqueTeamMap = new Map<string, TeamMember>();
+            json.data.forEach((m: any) => {
               const normEmail = (m.email || '').trim().toLowerCase();
+              if (!normEmail) return;
+
               const cachedPassword = passMap[normEmail] || '';
-              return {
+              const processedMember: TeamMember = {
                 ...m,
                 password: m.password || cachedPassword,
               };
+
+              const existing = uniqueTeamMap.get(normEmail);
+              if (!existing) {
+                uniqueTeamMap.set(normEmail, processedMember);
+              } else {
+                // If one row is active or has higher role, preserve the higher privilege
+                const isExistingAdmin = normalizeRole(existing.role) === 'Admin';
+                const isNewAdmin = normalizeRole(m.role) === 'Admin';
+                if (!isExistingAdmin && isNewAdmin) {
+                  uniqueTeamMap.set(normEmail, processedMember);
+                } else if (existing.active === false && m.active !== false) {
+                  uniqueTeamMap.set(normEmail, processedMember);
+                }
+              }
             });
 
+            team = Array.from(uniqueTeamMap.values());
             saveTeamToStorage(team);
             backendSynced = true;
           }
         }
+      } catch {
+        team = loadTeamFromStorage();
       }
-    } catch {
-      team = loadTeamFromStorage();
-    }
 
-    team = team.map((m) => {
+    const uniqueMap = new Map<string, TeamMember>();
+    team.forEach((m) => {
       const normEmail = (m.email || '').trim().toLowerCase();
-      return {
+      if (!normEmail) return;
+      const cachedPassword = passMap[normEmail] || '';
+      const processed: TeamMember = {
         ...m,
-        password: m.password || passMap[normEmail] || '',
+        password: m.password || cachedPassword,
       };
+      if (!uniqueMap.has(normEmail)) {
+        uniqueMap.set(normEmail, processed);
+      }
     });
+    team = Array.from(uniqueMap.values());
 
     return { team, backendSynced };
   };

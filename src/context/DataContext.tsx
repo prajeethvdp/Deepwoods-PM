@@ -555,6 +555,16 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Team CRUD Operations
   const addTeamMember = async (memberData: Omit<TeamMember, 'id'>): Promise<TeamMember> => {
+    const normEmail = (memberData.email || '').trim().toLowerCase();
+    const existing = teamMembers.find((m) => m.email && m.email.trim().toLowerCase() === normEmail);
+
+    if (existing) {
+      const updated = { ...existing, ...memberData };
+      setTeamMembers((prev) => prev.map((m) => (m.id === existing.id ? updated : m)));
+      sendAppsScriptAction('updateTeamMember', { data: updated });
+      return updated;
+    }
+
     const newMember: TeamMember = {
       ...memberData,
       id: `tm-${Date.now()}`,
