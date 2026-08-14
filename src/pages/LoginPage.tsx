@@ -11,9 +11,13 @@ import {
   Send,
   KeyRound,
   Mail,
+  UserPlus,
+  LogIn,
+  User,
+  Briefcase,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { TeamMember } from '../types';
+import { UserRole } from '../types';
 
 interface LoginPageProps {
   onLoginSuccess: () => void;
@@ -24,17 +28,30 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
     verifyGoogleUser,
     completeLogin,
     loginWithPassword,
-    setPasswordForUser,
+    signUpWithPassword,
     sendPasswordResetOTP,
     verifyOTPAndResetPassword,
   } = useAuth();
 
-  // Primary Login State: Default to Google OAuth when opened
-  const [authMethod, setAuthMethod] = useState<'google' | 'password'>('google');
+  // Tab State: 'signin' or 'signup'
+  const [activeTab, setActiveTab] = useState<'signin' | 'signup'>('signin');
+
+  // Sign In State
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Sign Up State
+  const [signUpName, setSignUpName] = useState('');
+  const [signUpEmail, setSignUpEmail] = useState('');
+  const [signUpPassword, setSignUpPassword] = useState('');
+  const [signUpConfirmPassword, setSignUpConfirmPassword] = useState('');
+  const [signUpRole, setSignUpRole] = useState<UserRole>('Employee');
+  const [showSignUpPassword, setShowSignUpPassword] = useState(false);
+  const [isSignUpSubmitting, setIsSignUpSubmitting] = useState(false);
+
+  // Global Messages
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
@@ -44,23 +61,13 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
   const buttonContainerRef = useRef<HTMLDivElement>(null);
   const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
-  // Post-Google OAuth Password Setup Modal State
-  const [isGooglePasswordModalOpen, setIsGooglePasswordModalOpen] = useState(false);
-  const [googleUser, setGoogleUser] = useState<TeamMember | null>(null);
-  const [googleNewPassword, setGoogleNewPassword] = useState('');
-  const [googleConfirmPassword, setGoogleConfirmPassword] = useState('');
-  const [showGooglePassword, setShowGooglePassword] = useState(false);
-  const [googleModalSubmitting, setGoogleModalSubmitting] = useState(false);
-  const [googleModalError, setGoogleModalError] = useState<string | null>(null);
-
   // 2-Step Reset Password Modal State
   const [isResetModalOpen, setIsResetModalOpen] = useState(false);
-  const [resetStep, setResetStep] = useState<1 | 2>(1); // 1 = Enter Email, 2 = Verify Code & Password
+  const [resetStep, setResetStep] = useState<1 | 2>(1);
   const [resetEmail, setResetEmail] = useState('');
   const [otpCode, setOtpCode] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [showResetPassword, setShowResetPassword] = useState(false);
   const [resetSubmitting, setResetSubmitting] = useState(false);
   const [resetError, setResetError] = useState<string | null>(null);
   const [resetSuccess, setResetSuccess] = useState<string | null>(null);
@@ -90,16 +97,8 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
         if (payload && payload.email) {
           const res = await verifyGoogleUser(payload.email, payload.name || payload.email.split('@')[0]);
           if (res.success && res.user) {
-            if (!res.user.password) {
-              setGoogleUser(res.user);
-              setGoogleNewPassword('');
-              setGoogleConfirmPassword('');
-              setGoogleModalError(null);
-              setIsGooglePasswordModalOpen(true);
-            } else {
-              completeLogin(res.user);
-              onLoginSuccess();
-            }
+            completeLogin(res.user);
+            onLoginSuccess();
           } else {
             setErrorMessage(res.error || 'Access Denied.');
           }
@@ -183,6 +182,44 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
     }
   };
 
+  // Handle Create Account (Sign Up)
+  const handleSignUpSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMessage(null);
+    setSuccessMessage(null);
+
+    if (!signUpName.trim()) {
+      setErrorMessage('Please enter your full name.');
+      return;
+    }
+    if (!signUpEmail.trim()) {
+      setErrorMessage('Please enter your email address.');
+      return;
+    }
+    if (!signUpPassword || signUpPassword.length < 4) {
+      setErrorMessage('Password must be at least 4 characters long.');
+      return;
+    }
+    if (signUpPassword !== signUpConfirmPassword) {
+      setErrorMessage('Passwords do not match. Please re-enter.');
+      return;
+    }
+
+    setIsSignUpSubmitting(true);
+    try {
+      const result = await signUpWithPassword(signUpName, signUpEmail, signUpPassword, signUpRole);
+      if (result.success) {
+        onLoginSuccess();
+      } else {
+        setErrorMessage(result.error || 'Account creation failed.');
+      }
+    } catch (err) {
+      setErrorMessage('An unexpected error occurred during account creation.');
+    } finally {
+      setIsSignUpSubmitting(false);
+    }
+  };
+
   // Open Reset Password Modal (Step 1)
   const handleOpenResetModal = () => {
     setResetEmail(email.trim());
@@ -211,7 +248,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
       const res = await sendPasswordResetOTP(resetEmail);
       if (res.success) {
         setResetSuccess(res.message || `Verification code sent to ${resetEmail}!`);
-        setResetStep(2); // Move to Step 2: Verification Code & New Password
+        setResetStep(2);
       } else {
         setResetError(res.error || 'Failed to send verification code.');
       }
@@ -264,49 +301,6 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
     }
   };
 
-  // Save Password from Post-Google OAuth Modal
-  const handleSaveGooglePassword = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setGoogleModalError(null);
-
-    if (!googleNewPassword || googleNewPassword.length < 4) {
-      setGoogleModalError('Password must be at least 4 characters long.');
-      return;
-    }
-
-    if (googleNewPassword !== googleConfirmPassword) {
-      setGoogleModalError('Passwords do not match. Please check and try again.');
-      return;
-    }
-
-    if (!googleUser) {
-      onLoginSuccess();
-      return;
-    }
-
-    setGoogleModalSubmitting(true);
-    try {
-      const res = await setPasswordForUser(googleUser.email, googleNewPassword);
-      const userToLogin = res.updatedUser || googleUser;
-      setIsGooglePasswordModalOpen(false);
-      completeLogin(userToLogin);
-      onLoginSuccess();
-    } catch (err) {
-      setGoogleModalError('Error saving password.');
-    } finally {
-      setGoogleModalSubmitting(false);
-    }
-  };
-
-  // Continue to Dashboard post-Google OAuth
-  const handleSkipGooglePassword = () => {
-    if (googleUser) {
-      completeLogin(googleUser);
-    }
-    setIsGooglePasswordModalOpen(false);
-    onLoginSuccess();
-  };
-
   return (
     <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center p-6 relative overflow-hidden select-none font-sans text-slate-800">
       {/* Soft Pastel Circular Accent Shapes in Green Tones */}
@@ -314,7 +308,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
       <div className="absolute -bottom-36 -left-36 w-[450px] h-[450px] bg-teal-200/35 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute bottom-10 right-10 w-64 h-64 bg-emerald-100/40 rounded-full blur-2xl pointer-events-none" />
 
-      <div className="max-w-md w-full relative z-10 space-y-7">
+      <div className="max-w-md w-full relative z-10 space-y-6">
         {/* Brand Logo & Centered Title Header */}
         <div className="text-center space-y-2">
           <div className="inline-block p-2 rounded-2xl bg-white/80 shadow-xs backdrop-blur-xs mb-1">
@@ -325,10 +319,12 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
             />
           </div>
           <h1 className="text-3xl font-bold text-emerald-700 tracking-tight font-serif">
-            Sign in
+            {activeTab === 'signin' ? 'Sign in' : 'Create an Account'}
           </h1>
           <p className="text-xs text-slate-400 font-medium">
-            Welcome back to Deepwoods Green Project Platform
+            {activeTab === 'signin'
+              ? 'Welcome back to Deepwoods Green Project Platform'
+              : 'Join Deepwoods Green Project Platform to manage your workspace'}
           </p>
         </div>
 
@@ -354,10 +350,46 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
         )}
 
         {/* Floating Minimal Card Container */}
-        <div className="bg-white/90 rounded-3xl p-8 shadow-xl border border-slate-100 backdrop-blur-md space-y-6">
+        <div className="bg-white/90 rounded-3xl p-7 shadow-xl border border-slate-100 backdrop-blur-md space-y-5">
+          {/* Segmented Tab Switcher */}
+          <div className="flex bg-slate-100/90 p-1 rounded-2xl border border-slate-200/70">
+            <button
+              type="button"
+              onClick={() => {
+                setActiveTab('signin');
+                setErrorMessage(null);
+                setSuccessMessage(null);
+              }}
+              className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1.5 ${
+                activeTab === 'signin'
+                  ? 'bg-white text-emerald-700 shadow-xs'
+                  : 'text-slate-500 hover:text-slate-800'
+              }`}
+            >
+              <LogIn className="w-3.5 h-3.5" />
+              <span>Sign In</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setActiveTab('signup');
+                setErrorMessage(null);
+                setSuccessMessage(null);
+              }}
+              className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1.5 ${
+                activeTab === 'signup'
+                  ? 'bg-white text-emerald-700 shadow-xs'
+                  : 'text-slate-500 hover:text-slate-800'
+              }`}
+            >
+              <UserPlus className="w-3.5 h-3.5" />
+              <span>Create Account</span>
+            </button>
+          </div>
+
           {/* Prominent Google OAuth Section */}
           <div className="space-y-3 flex flex-col items-center">
-            <div className="flex flex-col items-center justify-center min-h-[50px] w-full">
+            <div className="flex flex-col items-center justify-center min-h-[46px] w-full">
               {isVerifying ? (
                 <div className="flex items-center gap-2 text-emerald-700 text-xs font-bold py-2 animate-pulse">
                   <Loader2 className="w-4 h-4 animate-spin" />
@@ -367,7 +399,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
                 <>
                   <div ref={buttonContainerRef} id="google-signin-button" className="flex justify-center w-full" />
                   {!isGsiLoaded && googleClientId && (
-                    <div className="text-xs text-slate-400 animate-pulse mt-2">
+                    <div className="text-xs text-slate-400 animate-pulse mt-1">
                       Loading Google OAuth...
                     </div>
                   )}
@@ -386,83 +418,244 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
           <div className="relative flex items-center justify-center">
             <div className="border-t border-slate-200 w-full" />
             <span className="bg-white px-3 text-[11px] text-slate-400 font-medium absolute uppercase tracking-wider">
-              or
+              or continue with email
             </span>
           </div>
 
-          {/* Minimal Underline Style Password Form */}
-          <form onSubmit={handlePasswordSubmit} className="space-y-5 pt-1">
-            {/* Email Field */}
-            <div className="space-y-1 relative">
-              <label className="text-xs font-semibold text-slate-400 block">
-                Email Address
-              </label>
-              <div className="relative flex items-center">
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="name@company.com"
-                  required
-                  className="w-full bg-transparent border-b border-slate-200 py-2 text-sm text-slate-900 placeholder:text-slate-300 focus:outline-none focus:border-emerald-600 transition"
-                />
-                {email.length > 3 && (
-                  <span className="absolute right-0 text-emerald-600">
-                    <Check className="w-4 h-4" />
-                  </span>
-                )}
+          {/* TAB 1: SIGN IN FORM */}
+          {activeTab === 'signin' && (
+            <form onSubmit={handlePasswordSubmit} className="space-y-4 pt-1">
+              {/* Email Field */}
+              <div className="space-y-1 relative">
+                <label className="text-xs font-semibold text-slate-400 block">
+                  Email Address
+                </label>
+                <div className="relative flex items-center">
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="name@company.com"
+                    required
+                    className="w-full bg-transparent border-b border-slate-200 py-2 text-sm text-slate-900 placeholder:text-slate-300 focus:outline-none focus:border-emerald-600 transition"
+                  />
+                  {email.length > 3 && (
+                    <span className="absolute right-0 text-emerald-600">
+                      <Check className="w-4 h-4" />
+                    </span>
+                  )}
+                </div>
               </div>
-            </div>
 
-            {/* Password Field */}
-            <div className="space-y-1 relative">
-              <div className="flex items-center justify-between">
+              {/* Password Field */}
+              <div className="space-y-1 relative">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-semibold text-slate-400 block">
+                    Password
+                  </label>
+                  <button
+                    type="button"
+                    onClick={handleOpenResetModal}
+                    className="text-[11px] font-semibold text-emerald-700 hover:text-emerald-800 transition"
+                  >
+                    Forgot password?
+                  </button>
+                </div>
+                <div className="relative flex items-center">
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="••••••••"
+                    required
+                    className="w-full bg-transparent border-b border-slate-200 py-2 text-sm text-slate-900 placeholder:text-slate-300 pr-8 focus:outline-none focus:border-emerald-600 transition"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-0 text-slate-400 hover:text-slate-600 transition"
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+
+              {/* Sign in button */}
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="w-full py-3.5 px-6 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm shadow-md hover:shadow-emerald-600/25 transition-all transform active:scale-[0.99] flex items-center justify-center gap-2 disabled:opacity-50 mt-2"
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Signing in...</span>
+                  </>
+                ) : (
+                  <span>Sign in</span>
+                )}
+              </button>
+
+              <div className="text-center pt-2">
+                <p className="text-xs text-slate-500">
+                  Don't have an account?{' '}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveTab('signup');
+                      setErrorMessage(null);
+                    }}
+                    className="font-bold text-emerald-700 hover:underline"
+                  >
+                    Create an account
+                  </button>
+                </p>
+              </div>
+            </form>
+          )}
+
+          {/* TAB 2: CREATE ACCOUNT FORM */}
+          {activeTab === 'signup' && (
+            <form onSubmit={handleSignUpSubmit} className="space-y-4 pt-1">
+              {/* Full Name Field */}
+              <div className="space-y-1 relative">
+                <label className="text-xs font-semibold text-slate-400 block">
+                  Full Name
+                </label>
+                <div className="relative flex items-center">
+                  <input
+                    type="text"
+                    value={signUpName}
+                    onChange={(e) => setSignUpName(e.target.value)}
+                    placeholder="Jane Doe"
+                    required
+                    className="w-full bg-transparent border-b border-slate-200 py-2 text-sm text-slate-900 placeholder:text-slate-300 focus:outline-none focus:border-emerald-600 transition"
+                  />
+                  {signUpName.length > 2 && (
+                    <span className="absolute right-0 text-emerald-600">
+                      <Check className="w-4 h-4" />
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Email Address Field */}
+              <div className="space-y-1 relative">
+                <label className="text-xs font-semibold text-slate-400 block">
+                  Email Address
+                </label>
+                <div className="relative flex items-center">
+                  <input
+                    type="email"
+                    value={signUpEmail}
+                    onChange={(e) => setSignUpEmail(e.target.value)}
+                    placeholder="name@company.com"
+                    required
+                    className="w-full bg-transparent border-b border-slate-200 py-2 text-sm text-slate-900 placeholder:text-slate-300 focus:outline-none focus:border-emerald-600 transition"
+                  />
+                  {signUpEmail.includes('@') && (
+                    <span className="absolute right-0 text-emerald-600">
+                      <Check className="w-4 h-4" />
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Role Selection Field */}
+              <div className="space-y-1 relative">
+                <label className="text-xs font-semibold text-slate-400 block">
+                  Account Role
+                </label>
+                <select
+                  value={signUpRole}
+                  onChange={(e) => setSignUpRole(e.target.value as UserRole)}
+                  className="w-full bg-transparent border-b border-slate-200 py-2 text-sm text-slate-900 focus:outline-none focus:border-emerald-600 transition font-medium"
+                >
+                  <option value="Employee">Employee / Team Member</option>
+                  <option value="Product Manager">Product Manager / Project Lead</option>
+                  <option value="Admin">Workspace Admin</option>
+                </select>
+              </div>
+
+              {/* Password Field */}
+              <div className="space-y-1 relative">
                 <label className="text-xs font-semibold text-slate-400 block">
                   Password
                 </label>
-                <button
-                  type="button"
-                  onClick={handleOpenResetModal}
-                  className="text-[11px] font-semibold text-emerald-700 hover:text-emerald-800 transition"
-                >
-                  Forgot password?
-                </button>
+                <div className="relative flex items-center">
+                  <input
+                    type={showSignUpPassword ? 'text' : 'password'}
+                    value={signUpPassword}
+                    onChange={(e) => setSignUpPassword(e.target.value)}
+                    placeholder="Min 4 characters"
+                    required
+                    className="w-full bg-transparent border-b border-slate-200 py-2 text-sm text-slate-900 placeholder:text-slate-300 pr-8 focus:outline-none focus:border-emerald-600 transition"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowSignUpPassword(!showSignUpPassword)}
+                    className="absolute right-0 text-slate-400 hover:text-slate-600 transition"
+                  >
+                    {showSignUpPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
               </div>
-              <div className="relative flex items-center">
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  required
-                  className="w-full bg-transparent border-b border-slate-200 py-2 text-sm text-slate-900 placeholder:text-slate-300 pr-8 focus:outline-none focus:border-emerald-600 transition"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-0 text-slate-400 hover:text-slate-600 transition"
-                >
-                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
-              </div>
-            </div>
 
-            {/* Sign in button */}
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="w-full py-3.5 px-6 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm shadow-md hover:shadow-emerald-600/25 transition-all transform active:scale-[0.99] flex items-center justify-center gap-2 disabled:opacity-50 mt-2"
-            >
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>Signing in...</span>
-                </>
-              ) : (
-                <span>Sign in</span>
-              )}
-            </button>
-          </form>
+              {/* Confirm Password Field */}
+              <div className="space-y-1 relative">
+                <label className="text-xs font-semibold text-slate-400 block">
+                  Confirm Password
+                </label>
+                <div className="relative flex items-center">
+                  <input
+                    type={showSignUpPassword ? 'text' : 'password'}
+                    value={signUpConfirmPassword}
+                    onChange={(e) => setSignUpConfirmPassword(e.target.value)}
+                    placeholder="Re-enter password"
+                    required
+                    className="w-full bg-transparent border-b border-slate-200 py-2 text-sm text-slate-900 placeholder:text-slate-300 pr-8 focus:outline-none focus:border-emerald-600 transition"
+                  />
+                  {signUpConfirmPassword.length > 0 && signUpConfirmPassword === signUpPassword && (
+                    <span className="absolute right-0 text-emerald-600">
+                      <Check className="w-4 h-4" />
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Submit Button */}
+              <button
+                type="submit"
+                disabled={isSignUpSubmitting}
+                className="w-full py-3.5 px-6 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm shadow-md hover:shadow-emerald-600/25 transition-all transform active:scale-[0.99] flex items-center justify-center gap-2 disabled:opacity-50 mt-2"
+              >
+                {isSignUpSubmitting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Creating Account...</span>
+                  </>
+                ) : (
+                  <span>Create Account</span>
+                )}
+              </button>
+
+              <div className="text-center pt-2">
+                <p className="text-xs text-slate-500">
+                  Already have an account?{' '}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveTab('signin');
+                      setErrorMessage(null);
+                    }}
+                    className="font-bold text-emerald-700 hover:underline"
+                  >
+                    Sign in
+                  </button>
+                </p>
+              </div>
+            </form>
+          )}
         </div>
 
         {/* Footer Security Badge */}
@@ -471,65 +664,6 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
           <span>Encrypted Workspace Session & OAuth 2.0 Protection</span>
         </div>
       </div>
-
-      {/* POST-GOOGLE OAUTH PASS MODAL */}
-      {isGooglePasswordModalOpen && googleUser && (
-        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl border border-slate-100 space-y-4">
-            <h3 className="font-bold text-slate-900 text-base font-serif">Set Account Password</h3>
-            <p className="text-xs text-slate-500">
-              Welcome, <strong className="text-emerald-700">{googleUser.name}</strong>! You can set an optional password for direct login.
-            </p>
-
-            {googleModalError && (
-              <div className="bg-red-50 text-red-700 text-xs p-3 rounded-xl border border-red-200">
-                {googleModalError}
-              </div>
-            )}
-
-            <form onSubmit={handleSaveGooglePassword} className="space-y-4 text-xs">
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">New Password</label>
-                <input
-                  type={showGooglePassword ? 'text' : 'password'}
-                  value={googleNewPassword}
-                  onChange={(e) => setGoogleNewPassword(e.target.value)}
-                  placeholder="Min 4 characters"
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-900 focus:outline-none focus:border-emerald-600"
-                />
-              </div>
-
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">Confirm Password</label>
-                <input
-                  type={showGooglePassword ? 'text' : 'password'}
-                  value={googleConfirmPassword}
-                  onChange={(e) => setGoogleConfirmPassword(e.target.value)}
-                  placeholder="Re-enter password"
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-900 focus:outline-none focus:border-emerald-600"
-                />
-              </div>
-
-              <div className="flex justify-between items-center pt-2">
-                <button
-                  type="button"
-                  onClick={handleSkipGooglePassword}
-                  className="text-xs font-semibold text-slate-400 hover:text-slate-600"
-                >
-                  Skip & Continue
-                </button>
-                <button
-                  type="submit"
-                  disabled={googleModalSubmitting}
-                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl shadow-xs"
-                >
-                  Save Password
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
 
       {/* 2-STEP EMAIL OTP VERIFICATION RESET PASSWORD MODAL */}
       {isResetModalOpen && (

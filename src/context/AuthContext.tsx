@@ -36,6 +36,7 @@ interface AuthContextType {
   completeLogin: (user: TeamMember) => void;
   loginWithGoogle: (email: string, name: string) => Promise<{ success: boolean; user?: TeamMember; error?: string }>;
   loginWithPassword: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  signUpWithPassword: (name: string, email: string, password: string, role?: UserRole) => Promise<{ success: boolean; user?: TeamMember; error?: string }>;
   setPasswordForUser: (email: string, newPassword: string) => Promise<{ success: boolean; updatedUser?: TeamMember; error?: string }>;
   sendPasswordResetOTP: (email: string) => Promise<{ success: boolean; error?: string; message?: string }>;
   verifyOTPAndResetPassword: (email: string, otpCode: string, newPassword: string) => Promise<{ success: boolean; error?: string; message?: string }>;
@@ -171,10 +172,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return { success: true, user: found };
     }
 
-    return {
-      success: false,
-      error: `Access Denied: ${email} is not on the allowed team members list. Contact workspace admin to get added.`,
+    // Auto-create user account for Google Sign-In if not existing
+    const newMember: TeamMember = {
+      id: `tm-${Date.now()}`,
+      name: name || normalized.split('@')[0],
+      email: normalized,
+      role: 'Employee',
+      color: '#10B981',
+      active: true,
     };
+
+    const updatedTeam = [...team, newMember];
+    saveTeamToStorage(updatedTeam);
+    sendAppsScriptAction('addTeamMember', { data: newMember }).catch((err) =>
+      console.warn('Background sheet addTeamMember sync:', err)
+    );
+
+    return { success: true, user: newMember };
   };
 
   const loginWithGoogle = async (
@@ -241,6 +255,58 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     completeLogin(found);
     return { success: true };
+  };
+
+  const signUpWithPassword = async (
+    name: string,
+    email: string,
+    password: string,
+    role: UserRole = 'Employee'
+  ): Promise<{ success: boolean; user?: TeamMember; error?: string }> => {
+    const normalized = email.trim().toLowerCase();
+    if (!name.trim()) {
+      return { success: false, error: 'Please enter your full name.' };
+    }
+    if (!normalized) {
+      return { success: false, error: 'Please enter a valid email address.' };
+    }
+    if (!password || password.length < 4) {
+      return { success: false, error: 'Password must be at least 4 characters long.' };
+    }
+
+    const { team } = await fetchLatestTeam();
+    const existing = team.find((m) => m.email && m.email.trim().toLowerCase() === normalized);
+    if (existing) {
+      return {
+        success: false,
+        error: `An account with email ${email} already exists. Please sign in instead.`,
+      };
+    }
+
+    const hashedPassword = await hashPassword(password);
+    setStoredPassword(normalized, hashedPassword);
+
+    const newMember: TeamMember = {
+      id: `tm-${Date.now()}`,
+      name: name.trim(),
+      email: normalized,
+      role: role || 'Employee',
+      color: '#10B981',
+      active: true,
+      password: hashedPassword,
+    };
+
+    const updatedTeam = [...team, newMember];
+    saveTeamToStorage(updatedTeam);
+    sendAppsScriptAction('addTeamMember', { data: newMember }).catch((err) =>
+      console.warn('Background sheet addTeamMember sync:', err)
+    );
+    resetPasswordInBackend(normalized, hashedPassword).catch((err) =>
+      console.warn('Background sheet password sync:', err)
+    );
+
+    completeLogin(newMember);
+    return { success: true, user: newMember };
   };
 
   const setPasswordForUser = async (
@@ -454,6 +520,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         completeLogin,
         loginWithGoogle,
         loginWithPassword,
+        signUpWithPassword,
         setPasswordForUser,
         sendPasswordResetOTP,
         verifyOTPAndResetPassword,
