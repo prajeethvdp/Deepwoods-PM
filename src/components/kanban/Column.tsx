@@ -30,7 +30,7 @@ export const Column: React.FC<ColumnProps> = ({ status, tasks, onAddTask }) => {
       {/* Column Header */}
       <div className="flex items-center justify-between px-4 pt-4 pb-3">
         <div className="flex items-center gap-2">
-          <h3 className="font-bold text-sm text-slate-800 font-sans">
+          <h3 className="font-bold text-sm text-slate-800 font-serif">
             {config.label}
           </h3>
           <span className="text-xs font-bold text-slate-500 bg-white border border-slate-200 rounded-full w-5 h-5 flex items-center justify-center leading-none shadow-xs">

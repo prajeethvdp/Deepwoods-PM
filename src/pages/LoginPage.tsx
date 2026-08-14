@@ -324,7 +324,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
               className="h-12 w-auto mx-auto object-contain"
             />
           </div>
-          <h1 className="text-3xl font-bold text-emerald-700 tracking-tight font-sans">
+          <h1 className="text-3xl font-bold text-emerald-700 tracking-tight font-serif">
             Sign in
           </h1>
           <p className="text-xs text-slate-400 font-medium">
@@ -476,7 +476,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
       {isGooglePasswordModalOpen && googleUser && (
         <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl border border-slate-100 space-y-4">
-            <h3 className="font-bold text-slate-900 text-base font-sans">Set Account Password</h3>
+            <h3 className="font-bold text-slate-900 text-base font-serif">Set Account Password</h3>
             <p className="text-xs text-slate-500">
               Welcome, <strong className="text-emerald-700">{googleUser.name}</strong>! You can set an optional password for direct login.
             </p>
@@ -547,7 +547,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
                 <KeyRound className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="font-bold text-slate-900 text-base font-sans">Reset Account Password</h3>
+                <h3 className="font-bold text-slate-900 text-base font-serif">Reset Account Password</h3>
                 <p className="text-xs text-slate-400 font-medium">
                   {resetStep === 1 ? 'Step 1: Request Email Verification Code' : 'Step 2: Enter OTP Code & Set Password'}
                 </p>
