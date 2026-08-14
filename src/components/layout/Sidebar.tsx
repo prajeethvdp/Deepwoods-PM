@@ -64,36 +64,37 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {/* Top Header & Brand */}
         <div className="flex flex-col gap-5 min-h-0 overflow-y-auto pr-0.5 custom-scrollbar">
           {/* Brand Logo & Collapse Toggle */}
-          <div className="flex items-center justify-between gap-2">
-            {!isCollapsed ? (
+          {!isCollapsed ? (
+            <div className="flex items-center justify-between gap-2">
               <div
                 onClick={() => setCurrentTab('dashboard')}
-                className="flex items-center gap-2 cursor-pointer py-1 px-1 rounded-xl hover:bg-slate-50 transition"
+                className="flex items-center gap-2 cursor-pointer py-1 px-1 rounded-xl hover:bg-slate-50 transition min-w-0"
               >
                 <img
                   src="/logo.png"
                   alt="Deepwoods Logo"
-                  className="h-8 w-auto max-w-[170px] object-contain"
+                  className="h-8 w-auto max-w-[150px] object-contain flex-shrink-0"
                 />
               </div>
-            ) : (
-              <div
-                onClick={() => setCurrentTab('dashboard')}
-                className="w-10 h-10 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-center cursor-pointer mx-auto hover:bg-slate-100 transition shadow-2xs"
-                title="Dashboard"
+              <button
+                onClick={() => setIsCollapsed(true)}
+                className="p-1.5 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition shrink-0 hidden lg:block"
+                title="Collapse sidebar"
               >
-                <img src="/favicon.png" alt="Deepwoods Logo" className="w-6 h-6 object-contain" />
-              </div>
-            )}
-
-            <button
-              onClick={() => setIsCollapsed((prev) => !prev)}
-              className="p-1.5 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition shrink-0 hidden lg:block"
-              title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-            >
-              {isCollapsed ? <PanelLeftOpen className="w-4 h-4" /> : <PanelLeftClose className="w-4 h-4" />}
-            </button>
-          </div>
+                <PanelLeftClose className="w-4 h-4" />
+              </button>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center">
+              <button
+                onClick={() => setIsCollapsed(false)}
+                className="w-10 h-10 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center justify-center text-slate-600 hover:text-emerald-600 hover:bg-emerald-50 transition shadow-2xs shrink-0"
+                title="Expand sidebar"
+              >
+                <PanelLeftOpen className="w-5 h-5" />
+              </button>
+            </div>
+          )}
 
           {/* Primary Action Button (+ Create Task) */}
           {!isEmployee && (
