@@ -14,7 +14,7 @@ import { useData } from '../../context/DataContext';
 import { Task, TaskStatus } from '../../types';
 import { AlertCircle, Calendar, ZoomIn, ZoomOut, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { isTaskAssignedToUser } from '../../lib/permissions';
+import { isTaskAssignedToUser, matchesAssigneeFilter } from '../../lib/permissions';
 
 const safeParseDate = (dateStr: string | undefined | null): Date | null => {
   if (!dateStr || typeof dateStr !== 'string') return null;
@@ -56,13 +56,13 @@ export const GanttChart: React.FC<GanttChartProps> = ({ isMyTasksView = false })
       ) {
         return false;
       }
-      if (!isMyTasksView && filterOptions.assigneeId !== 'ALL' && t.assigneeId !== filterOptions.assigneeId) return false;
+      if (!isMyTasksView && !matchesAssigneeFilter(t, filterOptions.assigneeId, teamMembers)) return false;
       if (filterOptions.priority !== 'All' && t.priority !== filterOptions.priority) return false;
       if (filterOptions.status !== 'All' && t.status !== filterOptions.status) return false;
       if (!isMyTasksView && filterOptions.myTasksOnly && user && t.assigneeId !== user.id) return false;
       return true;
     });
-  }, [tasks, selectedProjectId, filterOptions, user, isMyTasksView]);
+  }, [tasks, selectedProjectId, filterOptions, user, isMyTasksView, teamMembers]);
 
   // Group tasks by project
   const groupedTasks = useMemo(() => {

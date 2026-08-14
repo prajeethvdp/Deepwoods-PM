@@ -25,7 +25,7 @@ export function getDatePresetOptions() {
 
 export const FilterBar: React.FC<FilterBarProps> = ({ currentTab }) => {
   const { teamMembers, filterOptions, setFilterOptions } = useData();
-  const { user } = useAuth();
+  const { user, isEmployee } = useAuth();
 
   const isMyTasksView = currentTab === 'my-tasks';
   const isDashboardView = currentTab === 'dashboard' || !currentTab;
@@ -141,13 +141,8 @@ export const FilterBar: React.FC<FilterBarProps> = ({ currentTab }) => {
           </div>
         )}
 
-        {/* Assignee Filter Dropdown */}
-        {isMyTasksView ? (
-          <div className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 border border-emerald-200 text-emerald-800 font-bold rounded-2xl shadow-2xs">
-            <User className="w-3.5 h-3.5 text-emerald-600" />
-            <span>My Tasks ({user?.name || 'Logged in Member'})</span>
-          </div>
-        ) : (
+        {/* Assignee / Filter by Employee Dropdown (Admin & PM only) */}
+        {!isMyTasksView && !isEmployee && (
           <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-2xl">
             <User className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0" />
             <select
@@ -160,7 +155,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({ currentTab }) => {
               }
               className="bg-transparent text-slate-800 font-bold focus:outline-none cursor-pointer pr-1"
             >
-              <option value="ALL">All Team Members ({teamMembers.length})</option>
+              <option value="ALL">Filter by Employee: All ({teamMembers.length})</option>
               {teamMembers.map((member) => (
                 <option key={member.id} value={member.id}>
                   {member.name} ({member.role || 'Employee'})
@@ -208,8 +203,8 @@ export const FilterBar: React.FC<FilterBarProps> = ({ currentTab }) => {
           ))}
         </select>
 
-        {/* My Tasks Toggle */}
-        {!isMyTasksView && user && (
+        {/* My Tasks Toggle (Admin & PM only) */}
+        {!isMyTasksView && !isEmployee && user && (
           <button
             onClick={() =>
               setFilterOptions((prev) => ({

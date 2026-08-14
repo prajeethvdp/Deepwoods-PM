@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
-import { isTaskAssignedToUser } from '../../lib/permissions';
+import { isTaskAssignedToUser, matchesAssigneeFilter } from '../../lib/permissions';
 import { Task, TaskStatus } from '../../types';
 import { STATUS_CONFIG } from '../../lib/constants';
 
@@ -63,7 +63,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ onAddDateTask }) => 
       t.title.toLowerCase().includes(filterOptions.searchQuery.toLowerCase()) ||
       (t.description || '').toLowerCase().includes(filterOptions.searchQuery.toLowerCase());
     const matchesStatus = statusFilter === 'ALL' || t.status === statusFilter;
-    const matchesAssignee = assigneeFilter === 'ALL' || t.assigneeId === assigneeFilter;
+    const matchesAssignee = matchesAssigneeFilter(t, assigneeFilter !== 'ALL' ? assigneeFilter : filterOptions.assigneeId, teamMembers);
     return matchesSearch && matchesStatus && matchesAssignee;
   });
 

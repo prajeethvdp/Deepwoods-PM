@@ -20,7 +20,7 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { useData } from '../context/DataContext';
 import { useAuth } from '../context/AuthContext';
 import { STATUS_CONFIG } from '../lib/constants';
-import { isTaskAssignedToUser } from '../lib/permissions';
+import { isTaskAssignedToUser, matchesAssigneeFilter } from '../lib/permissions';
 import { parseISO, isBefore, isAfter, isSameDay, startOfDay, subDays, startOfMonth, endOfMonth, format } from 'date-fns';
 import { TaskStatus } from '../types';
 
@@ -57,7 +57,7 @@ export const DashboardPage: React.FC = () => {
     ) {
       return false;
     }
-    if (filterOptions.assigneeId !== 'ALL' && t.assigneeId !== filterOptions.assigneeId) return false;
+    if (!matchesAssigneeFilter(t, filterOptions.assigneeId, teamMembers)) return false;
     if (filterOptions.priority !== 'All' && t.priority !== filterOptions.priority) return false;
     if (filterOptions.status !== 'All' && t.status !== filterOptions.status) return false;
     if (filterOptions.myTasksOnly && user && !isTaskAssignedToUser(t, user)) return false;

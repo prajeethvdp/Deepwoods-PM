@@ -12,7 +12,7 @@ import { KANBAN_COLUMNS } from '../../lib/constants';
 import { Task, TaskStatus } from '../../types';
 import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
-import { isTaskAssignedToUser } from '../../lib/permissions';
+import { isTaskAssignedToUser, matchesAssigneeFilter } from '../../lib/permissions';
 import { Column } from './Column';
 import { TaskCard } from './TaskCard';
 
@@ -22,7 +22,7 @@ interface BoardProps {
 }
 
 export const Board: React.FC<BoardProps> = ({ openTaskModalWithStatus, isMyTasksView = false }) => {
-  const { tasks, updateTaskStatus, selectedProjectId, filterOptions } = useData();
+  const { tasks, updateTaskStatus, selectedProjectId, filterOptions, teamMembers } = useData();
   const { user, isEmployee } = useAuth();
 
   const [activeTask, setActiveTask] = useState<Task | null>(null);
@@ -54,7 +54,7 @@ export const Board: React.FC<BoardProps> = ({ openTaskModalWithStatus, isMyTasks
       return false;
     }
     // Assignee filter (only when not in My Tasks View)
-    if (!isMyTasksView && filterOptions.assigneeId !== 'ALL' && t.assigneeId !== filterOptions.assigneeId) {
+    if (!isMyTasksView && !matchesAssigneeFilter(t, filterOptions.assigneeId, teamMembers)) {
       return false;
     }
     // Priority filter

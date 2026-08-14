@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useData } from '../context/DataContext';
 import { useAuth } from '../context/AuthContext';
-import { isTaskAssignedToUser } from '../lib/permissions';
+import { isTaskAssignedToUser, matchesAssigneeFilter } from '../lib/permissions';
 import { Priority, Task, TaskStatus } from '../types';
 import {
   Calendar,
@@ -80,10 +80,10 @@ export const ListViewPage: React.FC<ListViewPageProps> = ({
     ) {
       return false;
     }
-    if (!isMyTasksView && filterOptions.assigneeId !== 'ALL' && t.assigneeId !== filterOptions.assigneeId) return false;
+    if (!isMyTasksView && !matchesAssigneeFilter(t, filterOptions.assigneeId, teamMembers)) return false;
     if (filterOptions.priority !== 'All' && t.priority !== filterOptions.priority) return false;
     if (filterOptions.status !== 'All' && t.status !== filterOptions.status) return false;
-    if (!isMyTasksView && filterOptions.myTasksOnly && user && t.assigneeId !== user.id) return false;
+    if (!isMyTasksView && filterOptions.myTasksOnly && user && !isTaskAssignedToUser(t, user)) return false;
     return true;
   });
 

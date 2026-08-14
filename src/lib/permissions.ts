@@ -64,3 +64,20 @@ export function isTaskAssignedToUser(task: { assigneeId: string; assigneeEmail?:
   if (task.assigneeEmail && user.email && task.assigneeEmail.trim().toLowerCase() === user.email.trim().toLowerCase()) return true;
   return false;
 }
+
+/**
+ * Checks if a task matches the assignee filter selected by Admin / PM.
+ */
+export function matchesAssigneeFilter(
+  task: { assigneeId: string; assigneeEmail?: string },
+  assigneeIdFilter: string,
+  teamMembers: { id: string; email: string }[]
+): boolean {
+  if (!assigneeIdFilter || assigneeIdFilter === 'ALL') return true;
+  if (task.assigneeId === assigneeIdFilter) return true;
+  const targetMember = teamMembers.find((m) => m.id === assigneeIdFilter);
+  if (targetMember && task.assigneeEmail && targetMember.email && task.assigneeEmail.trim().toLowerCase() === targetMember.email.trim().toLowerCase()) {
+    return true;
+  }
+  return false;
+}

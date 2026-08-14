@@ -318,11 +318,11 @@ export const Header: React.FC<HeaderProps> = ({
                   )}
                 </div>
 
-                {/* 2. Assignee Filter */}
-                {!isMyTasksView && (
+                {/* 2. Assignee / Filter by Employee (Admin & PM only) */}
+                {!isMyTasksView && !isEmployee && (
                   <div className="space-y-1.5">
                     <label className="block text-[11px] font-extrabold text-slate-500 uppercase tracking-wider">
-                      Assignee
+                      Filter by Employee
                     </label>
                     <select
                       value={filterOptions.assigneeId}
@@ -334,7 +334,7 @@ export const Header: React.FC<HeaderProps> = ({
                       }
                       className="w-full bg-slate-50 border border-slate-200 text-slate-800 font-bold px-3 py-2 rounded-2xl focus:outline-none focus:border-emerald-500 cursor-pointer"
                     >
-                      <option value="ALL">All Team Members ({teamMembers.length})</option>
+                      <option value="ALL">All Employees / Team Members ({teamMembers.length})</option>
                       {teamMembers.map((member) => (
                         <option key={member.id} value={member.id}>
                           {member.name} ({member.role || 'Employee'})
@@ -392,8 +392,8 @@ export const Header: React.FC<HeaderProps> = ({
                   </select>
                 </div>
 
-                {/* 5. My Tasks Toggle Switch */}
-                {!isMyTasksView && user && (
+                {/* 5. My Tasks Toggle Switch (Admin & PM only) */}
+                {!isMyTasksView && !isEmployee && user && (
                   <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
                     <span className="text-xs font-bold text-slate-700">My Assigned Tasks Only</span>
                     <button
