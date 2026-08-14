@@ -183,9 +183,16 @@ export const Header: React.FC<HeaderProps> = ({
       {/* Left: Page Title & Project Dropdown */}
       <div className="flex items-center gap-2.5 sm:gap-4 shrink-0">
         <div className="flex items-center gap-2">
-          <h1 className="font-bold text-base sm:text-lg text-slate-900 tracking-tight whitespace-nowrap font-serif">
-            {getTabTitle()}
-          </h1>
+          {currentTab === 'dashboard' && user ? (
+            <h1 className="font-bold text-base sm:text-lg text-slate-900 tracking-tight whitespace-nowrap font-serif flex items-center gap-2">
+              <span>Welcome back, {user.name}</span>
+              <img src="/favicon.png" alt="Leaf logo" className="w-5 h-5 object-contain inline-block" />
+            </h1>
+          ) : (
+            <h1 className="font-bold text-base sm:text-lg text-slate-900 tracking-tight whitespace-nowrap font-serif">
+              {getTabTitle()}
+            </h1>
+          )}
         </div>
 
         {/* Project Switcher Dropdown (Only show on task/project views, not Team Settings or Docs) */}

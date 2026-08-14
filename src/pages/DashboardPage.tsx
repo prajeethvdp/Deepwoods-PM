@@ -198,15 +198,6 @@ export const DashboardPage: React.FC = () => {
 
   return (
     <div className="w-full min-h-full bg-[#EEF2F6] p-4 md:p-5 space-y-5 text-slate-800 font-sans select-none">
-      {/* Employee Personal Greeting Header */}
-      {isEmployee && (
-        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-2xs">
-          <h1 className="text-xl font-bold text-slate-900 font-serif flex items-center gap-2">
-            <span>Welcome back, {user?.name || 'Team Member'}</span>
-            <img src="/favicon.png" alt="Leaf logo" className="w-6 h-6 object-contain inline-block" />
-          </h1>
-        </div>
-      )}
 
       {/* Row 1: Stat Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
