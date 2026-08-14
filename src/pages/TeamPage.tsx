@@ -19,7 +19,7 @@ import { normalizeRole } from '../lib/permissions';
 
 export const TeamPage: React.FC = () => {
   const { teamMembers, tasks, addTeamMember, updateTeamMember, deleteTeamMember } = useData();
-  const { userRole, canManageTeam, canAccessTeamPage } = useAuth();
+  const { userRole, canManageTeam, canAccessTeamPage, approveUserByAdmin } = useAuth();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingMember, setEditingMember] = useState<TeamMember | null>(null);
@@ -30,6 +30,15 @@ export const TeamPage: React.FC = () => {
   const [role, setRole] = useState<UserRole>('Employee');
   const [email, setEmail] = useState('');
   const [color, setColor] = useState('#06B6D4');
+
+  // Track pending member role selection
+  const [pendingRoleMap, setPendingRoleMap] = useState<Record<string, UserRole>>({});
+  const [approvingMemberId, setApprovingMemberId] = useState<string | null>(null);
+
+  // Pending Approval Members
+  const pendingMembers = useMemo(() => {
+    return teamMembers.filter((m) => m.active === false);
+  }, [teamMembers]);
 
   // Compute active tasks count per member
   const memberTaskCount = useMemo(() => {
@@ -145,6 +154,81 @@ export const TeamPage: React.FC = () => {
 
   return (
     <div className="p-6 w-full space-y-5">
+      {/* Pending Account Approvals Banner for Admin */}
+      {canManageTeam && pendingMembers.length > 0 && (
+        <div className="bg-amber-50/90 border border-amber-200 rounded-2xl p-5 shadow-2xs space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <div className="p-2 bg-amber-100 text-amber-800 rounded-xl">
+                <AlertCircle className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="font-bold text-amber-950 text-sm font-serif">
+                  Pending Account Approvals ({pendingMembers.length})
+                </h3>
+                <p className="text-xs text-amber-700">
+                  New users have registered and are waiting for your approval and role assignment.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
+            {pendingMembers.map((member) => {
+              const selectedRole = pendingRoleMap[member.id] || 'Employee';
+              const isSubmitting = approvingMemberId === member.id;
+
+              return (
+                <div
+                  key={member.id}
+                  className="bg-white rounded-xl p-4 border border-amber-200/80 shadow-xs flex flex-col justify-between space-y-3"
+                >
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <h4 className="font-bold text-slate-900 text-xs">{member.name}</h4>
+                      <p className="text-[11px] text-slate-500">{member.email}</p>
+                    </div>
+                    <span className="px-2 py-0.5 bg-amber-100 text-amber-800 text-[10px] font-bold rounded-md uppercase tracking-wider">
+                      Pending
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-2 pt-2 border-t border-slate-100">
+                    <select
+                      value={selectedRole}
+                      onChange={(e) =>
+                        setPendingRoleMap((prev) => ({
+                          ...prev,
+                          [member.id]: e.target.value as UserRole,
+                        }))
+                      }
+                      className="bg-slate-50 border border-slate-200 rounded-lg text-xs p-1.5 font-semibold text-slate-700 focus:outline-none focus:border-emerald-600"
+                    >
+                      <option value="Employee">Employee</option>
+                      <option value="Product Manager">Product Manager</option>
+                      <option value="Admin">Admin</option>
+                    </select>
+
+                    <button
+                      onClick={async () => {
+                        setApprovingMemberId(member.id);
+                        await approveUserByAdmin(member.email, selectedRole);
+                        setApprovingMemberId(null);
+                      }}
+                      disabled={isSubmitting}
+                      className="flex-1 py-1.5 px-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-lg shadow-xs flex items-center justify-center gap-1.5 transition disabled:opacity-50"
+                    >
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      <span>{isSubmitting ? 'Approving...' : 'Approve & Activate'}</span>
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Read-Only Notice Banner for Product Manager */}
       {!canManageTeam && (
         <div className="p-4 bg-amber-50/90 border border-amber-200 rounded-2xl flex items-center justify-between gap-3 text-xs text-amber-900 shadow-2xs">

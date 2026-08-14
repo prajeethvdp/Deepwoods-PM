@@ -31,21 +31,32 @@ const notifyAdminsOfNewRegistration = (newMember: TeamMember, team: TeamMember[]
     new Set(adminEmails.length > 0 ? adminEmails : ['prajeethv100@gmail.com', 'prajeeth.deepwoods@gmail.com'])
   );
 
-  const subject = `🔔 New User Registration Alert: ${newMember.name} (${newMember.email})`;
+  const appUrl = typeof window !== 'undefined' ? window.location.origin : 'https://deepwoods-pm.vercel.app';
+  const approveUrl = `${appUrl}?approveEmail=${encodeURIComponent(newMember.email)}`;
+
+  const subject = `🚨 Action Required: Approve Account for ${newMember.name} (${newMember.email})`;
   const emailHtml = `
-    <div style="font-family: Arial, sans-serif; max-width: 540px; margin: 0 auto; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; padding: 24px; color: #1e293b;">
-      <div style="text-align: center; margin-bottom: 16px;">
-        <h2 style="color: #059669; margin: 0; font-size: 20px; font-weight: 800;">Deepwoods Green Workspace Alert</h2>
-        <p style="color: #64748b; font-size: 12px; margin-top: 4px;">New User Account Created</p>
+    <div style="font-family: Arial, sans-serif; max-width: 560px; margin: 0 auto; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; padding: 28px; color: #1e293b;">
+      <div style="text-align: center; margin-bottom: 20px;">
+        <h2 style="color: #059669; margin: 0; font-size: 22px; font-weight: 800;">Deepwoods Green Workspace Alert</h2>
+        <p style="color: #64748b; font-size: 13px; margin-top: 4px;">New Account Registration Pending Approval</p>
       </div>
-      <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 18px; margin: 16px 0;">
-        <p style="font-size: 13px; margin: 0 0 10px 0; color: #334155;">A new user has registered for the workspace platform:</p>
-        <div style="font-size: 13px; font-weight: bold; color: #0f172a; margin-bottom: 6px;">• Name: <span style="color: #059669;">${newMember.name}</span></div>
-        <div style="font-size: 13px; font-weight: bold; color: #0f172a; margin-bottom: 6px;">• Email: <span style="color: #2563eb;">${newMember.email}</span></div>
-        <div style="font-size: 13px; font-weight: bold; color: #0f172a;">• Assigned Role: <span style="color: #d97706;">Employee (Default)</span></div>
+      
+      <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; margin: 20px 0;">
+        <p style="font-size: 13px; margin: 0 0 10px 0; color: #334155; font-weight: bold;">Registered User Details:</p>
+        <div style="font-size: 13px; margin-bottom: 6px;">• <strong>Name:</strong> ${newMember.name}</div>
+        <div style="font-size: 13px; margin-bottom: 6px;">• <strong>Email:</strong> ${newMember.email}</div>
+        <div style="font-size: 13px;">• <strong>Status:</strong> <span style="color: #d97706; font-weight: bold;">Pending Admin Approval (Inactive)</span></div>
       </div>
-      <p style="font-size: 12px; color: #475569; line-height: 1.5;">
-        As an Admin, you can review this user and update their role (e.g., to Product Manager or Admin) anytime from the <strong>Team Management</strong> tab.
+
+      <div style="text-align: center; margin: 24px 0;">
+        <a href="${approveUrl}" style="background-color: #059669; color: #ffffff; text-decoration: none; padding: 14px 28px; border-radius: 12px; font-weight: bold; font-size: 14px; display: inline-block; box-shadow: 0 4px 6px -1px rgba(5, 150, 105, 0.2);">
+          Approve Account & Assign Role →
+        </a>
+      </div>
+
+      <p style="font-size: 12px; color: #64748b; text-align: center; line-height: 1.5; margin-top: 16px;">
+        Or log in as Admin and review pending users on the <strong>Team Management</strong> tab.
       </p>
     </div>
   `;
@@ -94,7 +105,8 @@ interface AuthContextType {
   completeLogin: (user: TeamMember) => void;
   loginWithGoogle: (email: string, name: string) => Promise<{ success: boolean; user?: TeamMember; error?: string }>;
   loginWithPassword: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
-  signUpWithPassword: (name: string, email: string, password: string) => Promise<{ success: boolean; user?: TeamMember; error?: string }>;
+  signUpWithPassword: (name: string, email: string, password: string) => Promise<{ success: boolean; user?: TeamMember; error?: string; pendingApproval?: boolean }>;
+  approveUserByAdmin: (userEmail: string, assignedRole: UserRole) => Promise<{ success: boolean; error?: string }>;
   setPasswordForUser: (email: string, newPassword: string) => Promise<{ success: boolean; updatedUser?: TeamMember; error?: string }>;
   sendPasswordResetOTP: (email: string) => Promise<{ success: boolean; error?: string; message?: string }>;
   verifyOTPAndResetPassword: (email: string, otpCode: string, newPassword: string) => Promise<{ success: boolean; error?: string; message?: string }>;
@@ -224,20 +236,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (found.active === false) {
         return {
           success: false,
-          error: `Account for ${email} is inactive. Contact workspace admin for access.`,
+          error: `Your account for ${email} is pending Admin approval. Please contact your Workspace Admin to approve access.`,
         };
       }
       return { success: true, user: found };
     }
 
-    // Auto-create user account for Google Sign-In with default Employee role
+    // Auto-create user account for Google Sign-In with active = false (Pending Admin Approval)
     const newMember: TeamMember = {
       id: `tm-${Date.now()}`,
       name: name || normalized.split('@')[0],
       email: normalized,
       role: 'Employee',
       color: '#10B981',
-      active: true,
+      active: false, // Pending Admin Approval!
     };
 
     const updatedTeam = [...team, newMember];
@@ -249,7 +261,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Notify Admins of new account creation
     notifyAdminsOfNewRegistration(newMember, team);
 
-    return { success: true, user: newMember };
+    return {
+      success: false,
+      user: newMember,
+      error: `Account registered via Google! Your account is pending Admin approval. Your Workspace Admin has been notified to approve your access.`,
+    };
   };
 
   const loginWithGoogle = async (
@@ -346,14 +362,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const hashedPassword = await hashPassword(password);
     setStoredPassword(normalized, hashedPassword);
 
-    // Enforce default Employee role for all new self-registrations
+    // Enforce active = false (Pending Approval) for all new self-registrations
     const newMember: TeamMember = {
       id: `tm-${Date.now()}`,
       name: name.trim(),
       email: normalized,
       role: 'Employee',
       color: '#10B981',
-      active: true,
+      active: false, // Pending Admin Approval!
       password: hashedPassword,
     };
 
@@ -366,11 +382,71 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.warn('Background sheet password sync:', err)
     );
 
-    // Send Admin Notification email & in-app alert
+    // Send Admin Notification email & in-app alert with One-Click Approval link
     notifyAdminsOfNewRegistration(newMember, team);
 
-    completeLogin(newMember);
-    return { success: true, user: newMember };
+    return {
+      success: true,
+      user: newMember,
+      error: `Account created successfully! Your account is pending Admin approval. You will receive an email once your Workspace Admin approves your access.`,
+    };
+  };
+
+  const approveUserByAdmin = async (
+    userEmail: string,
+    assignedRole: UserRole
+  ): Promise<{ success: boolean; error?: string }> => {
+    const normalized = userEmail.trim().toLowerCase();
+    const { team } = await fetchLatestTeam();
+    const foundIndex = team.findIndex((m) => m.email && m.email.trim().toLowerCase() === normalized);
+
+    if (foundIndex === -1) {
+      return { success: false, error: 'User account not found.' };
+    }
+
+    const updatedMember: TeamMember = {
+      ...team[foundIndex],
+      active: true,
+      role: assignedRole,
+    };
+
+    const updatedTeam = [...team];
+    updatedTeam[foundIndex] = updatedMember;
+
+    saveTeamToStorage(updatedTeam);
+    sendAppsScriptAction('updateTeamMember', { data: updatedMember }).catch((err) =>
+      console.warn('Background sheet updateTeamMember sync:', err)
+    );
+
+    // Send user email confirmation that their account has been approved!
+    const appUrl = typeof window !== 'undefined' ? window.location.origin : 'https://deepwoods-pm.vercel.app';
+    const subject = `🎉 Account Approved! Welcome to Deepwoods Green`;
+    const userEmailHtml = `
+      <div style="font-family: Arial, sans-serif; max-width: 520px; margin: 0 auto; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; padding: 28px; color: #1e293b;">
+        <div style="text-align: center; margin-bottom: 20px;">
+          <h2 style="color: #059669; margin: 0; font-size: 22px; font-weight: 800;">Deepwoods Green</h2>
+          <p style="color: #64748b; font-size: 13px; margin-top: 4px;">Account Approved & Activated</p>
+        </div>
+        <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; text-align: center; margin: 20px 0;">
+          <p style="font-size: 14px; color: #0f172a; margin: 0 0 10px 0;">Hello <strong>${updatedMember.name}</strong>,</p>
+          <p style="font-size: 13px; color: #475569; margin: 0 0 16px 0;">
+            Great news! Your workspace account has been approved by your Workspace Admin. You have been assigned the role: <strong style="color: #059669;">${assignedRole}</strong>.
+          </p>
+          <a href="${appUrl}" style="background-color: #059669; color: #ffffff; text-decoration: none; padding: 12px 24px; border-radius: 10px; font-weight: bold; font-size: 13px; display: inline-block;">
+            Sign In to Deepwoods Green →
+          </a>
+        </div>
+      </div>
+    `;
+
+    sendAppsScriptAction('sendEmail', {
+      recipientEmail: normalized,
+      subject,
+      htmlBody: userEmailHtml,
+    }).catch((err) => console.warn('Background user approval email dispatch:', err));
+
+    refreshUser(updatedTeam);
+    return { success: true };
   };
 
   const setPasswordForUser = async (
@@ -585,6 +661,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         loginWithGoogle,
         loginWithPassword,
         signUpWithPassword,
+        approveUserByAdmin,
         setPasswordForUser,
         sendPasswordResetOTP,
         verifyOTPAndResetPassword,

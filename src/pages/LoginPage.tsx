@@ -51,9 +51,18 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
   const [showSignUpPassword, setShowSignUpPassword] = useState(false);
   const [isSignUpSubmitting, setIsSignUpSubmitting] = useState(false);
 
-  // Global Messages
+  // Global Messages & Approval URL param
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [approveEmailParam, setApproveEmailParam] = useState<string | null>(null);
+
+  useEffect(() => {
+    const searchParams = new URLSearchParams(window.location.search);
+    const emailToApprove = searchParams.get('approveEmail');
+    if (emailToApprove) {
+      setApproveEmailParam(emailToApprove);
+    }
+  }, []);
 
   // Google OAuth State
   const [isGsiLoaded, setIsGsiLoaded] = useState(false);
@@ -228,7 +237,12 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
     try {
       const result = await signUpWithPassword(signUpName, signUpEmail, signUpPassword);
       if (result.success) {
-        onLoginSuccess();
+        setSuccessMessage(result.error || 'Account created successfully! Your account is pending Admin approval. You will receive an email once approved.');
+        setSignUpName('');
+        setSignUpEmail('');
+        setSignUpPassword('');
+        setSignUpConfirmPassword('');
+        setActiveTab('signin');
       } else {
         setErrorMessage(result.error || 'Account creation failed.');
       }
@@ -377,6 +391,19 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
               : 'Join Deepwoods Green Project Platform to manage your workspace'}
           </p>
         </div>
+
+        {/* Admin Approval Link Alert */}
+        {approveEmailParam && (
+          <div className="bg-amber-50 border border-amber-200 p-4 rounded-2xl flex items-start gap-3 animate-in fade-in duration-200 text-xs text-amber-900 shadow-2xs">
+            <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+            <div>
+              <span className="font-bold text-amber-950 block mb-0.5">Admin Approval Required</span>
+              <span className="leading-relaxed text-amber-800">
+                Please sign in as <strong>Workspace Admin</strong> to review and approve the pending account for <code className="font-bold text-amber-950 font-mono">{approveEmailParam}</code>.
+              </span>
+            </div>
+          </div>
+        )}
 
         {/* Global Error & Success Alerts */}
         {errorMessage && (
