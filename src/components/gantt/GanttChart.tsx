@@ -148,7 +148,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({ isMyTasksView = false })
     return (
       <div className="flex flex-col items-center justify-center h-96 p-8 text-center bg-white rounded-2xl border border-slate-200 m-6">
         <Calendar className="w-12 h-12 text-slate-300 mb-3" />
-        <h3 className="text-base font-bold text-slate-800">No Tasks on Timeline</h3>
+        <h3 className="text-base font-bold text-slate-800 font-serif">No Tasks on Timeline</h3>
         <p className="text-xs text-slate-500 max-w-sm mt-1">
           No tasks match active filters. Create a task or adjust filters to view Gantt bars.
         </p>

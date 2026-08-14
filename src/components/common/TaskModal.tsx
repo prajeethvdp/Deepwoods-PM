@@ -123,7 +123,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
               <Plus className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="font-bold text-slate-900 text-base leading-tight">Create & Assign Task</h3>
+              <h3 className="font-bold text-slate-900 text-base leading-tight font-serif">Create & Assign Task</h3>
               <p className="text-xs text-slate-500">Assignee will receive an instant email notification</p>
             </div>
           </div>

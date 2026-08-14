@@ -58,7 +58,7 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({ isOpen, onClose }) =
               <FolderPlus className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="font-bold text-slate-900 text-base leading-tight">Create Project</h3>
+              <h3 className="font-bold text-slate-900 text-base leading-tight font-serif">Create Project</h3>
               <p className="text-xs text-slate-500">Track tasks under a new sustainability project</p>
             </div>
           </div>

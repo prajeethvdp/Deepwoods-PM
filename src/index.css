@@ -2,31 +2,27 @@
 @import "tailwindcss";
 
 @theme {
-  --font-serif: Lora, Georgia, serif;
-  --font-sans: Inter, Helvetica, sans-serif;
+  --font-serif: 'Lora', Georgia, serif;
+  --font-sans: 'Inter', Helvetica, sans-serif;
 }
 
-/* Universal selector ensuring Inter for all non-heading elements */
-html, body, div, span, p, a, button, input, select, textarea, label, td, th, li, ul, ol, strong, b, em, small {
-  font-family: Inter, Helvetica, sans-serif;
+/* Default Body & Content Font */
+html, body, p, span, a, button, input, select, textarea, label, td, th, li, ul, ol {
+  font-family: 'Inter', Helvetica, sans-serif;
 }
 
-/* Force Lora for Headings & Title Elements */
+/* Force Lora, Georgia, serif for ALL Headings across all pages */
 h1, h2, h3, h4, h5, h6,
 .font-serif,
 .font-display,
 .font-heading,
 body h1, body h2, body h3, body h4, body h5, body h6 {
-  font-family: Lora, Georgia, serif !important;
+  font-family: 'Lora', Georgia, serif !important;
 }
 
-/* Utility Class Overrides */
+/* Utility Class for Body Text */
 .font-sans {
-  font-family: Inter, Helvetica, sans-serif !important;
-}
-
-.font-serif, .font-display, .font-heading {
-  font-family: Lora, Georgia, serif !important;
+  font-family: 'Inter', Helvetica, sans-serif;
 }
 
 /* Custom Scrollbars */

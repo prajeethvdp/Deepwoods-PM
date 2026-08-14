@@ -128,7 +128,7 @@ export const TeamPage: React.FC = () => {
           <div className="w-14 h-14 bg-rose-50 text-rose-600 rounded-2xl flex items-center justify-center mx-auto border border-rose-100">
             <Lock className="w-7 h-7" />
           </div>
-          <h2 className="text-xl font-bold text-slate-900">Access Restricted</h2>
+          <h2 className="text-xl font-bold text-slate-900 font-serif">Access Restricted</h2>
           <p className="text-xs text-slate-500 max-w-md mx-auto leading-relaxed">
             Team Member & Role Settings are restricted to workspace <strong>Admins</strong> and <strong>Product Managers</strong>. If you require role adjustments or member additions, please contact your workspace administrator.
           </p>
@@ -166,7 +166,7 @@ export const TeamPage: React.FC = () => {
         <div className="p-6 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2.5">
-              <h1 className="text-lg font-bold text-slate-900 tracking-tight">Team Members</h1>
+              <h1 className="text-lg font-bold text-slate-900 tracking-tight font-serif">Team Members</h1>
               <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-100 text-slate-600 border border-slate-200">
                 {teamMembers.length}
               </span>

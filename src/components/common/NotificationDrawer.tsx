@@ -77,7 +77,7 @@ export const NotificationDrawer: React.FC<NotificationDrawerProps> = ({ isOpen, 
               <Bell className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="font-bold text-slate-900 text-sm leading-tight">Email & Notifications Log</h3>
+              <h3 className="font-bold text-slate-900 text-sm leading-tight font-serif">Email & Notifications Log</h3>
               <p className="text-[11px] text-slate-500">Live dispatch history for task emails</p>
             </div>
           </div>
@@ -106,7 +106,7 @@ export const NotificationDrawer: React.FC<NotificationDrawerProps> = ({ isOpen, 
           {displayNotifications.length === 0 ? (
             <div className="text-center py-12 px-6">
               <Mail className="w-10 h-10 text-slate-300 mx-auto mb-3" />
-              <h4 className="text-sm font-semibold text-slate-800">No Email Dispatches Yet</h4>
+              <h4 className="text-sm font-semibold text-slate-800 font-serif">No Email Dispatches Yet</h4>
               <p className="text-xs text-slate-400 mt-1">
                 Creating or assigning tasks, marking completion, or triggering reminders will log automated email notifications here.
               </p>
