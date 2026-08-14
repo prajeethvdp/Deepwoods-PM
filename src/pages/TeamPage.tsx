@@ -479,24 +479,40 @@ export const TeamPage: React.FC = () => {
 
               <div>
                 <label className="block font-semibold text-slate-700 mb-1.5">Avatar Color</label>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   {PRESET_COLORS.map((c) => (
                     <button
                       key={c}
                       type="button"
                       onClick={() => setColor(c)}
                       className={`w-6 h-6 rounded-full transition ${
-                        color === c ? 'ring-2 ring-emerald-500 ring-offset-2' : ''
+                        color.toUpperCase() === c.toUpperCase() ? 'ring-2 ring-emerald-500 ring-offset-2 scale-110' : ''
                       }`}
                       style={{ backgroundColor: c }}
                     />
                   ))}
-                  <input
-                    type="color"
-                    value={color}
-                    onChange={(e) => setColor(e.target.value)}
-                    className="w-6 h-6 rounded border border-slate-200 cursor-pointer ml-1"
-                  />
+                  <div className="flex items-center gap-1.5 ml-1">
+                    <input
+                      type="color"
+                      value={color.startsWith('#') ? color : `#${color}`}
+                      onChange={(e) => setColor(e.target.value)}
+                      className="w-7 h-7 rounded border border-slate-200 cursor-pointer p-0.5"
+                    />
+                    <div className="relative flex items-center">
+                      <span className="absolute left-2.5 text-slate-400 font-mono text-xs font-bold">#</span>
+                      <input
+                        type="text"
+                        value={color.replace(/^#/, '')}
+                        onChange={(e) => {
+                          const val = e.target.value.trim().replace(/[^0-9A-Fa-f]/g, '').slice(0, 6);
+                          setColor(`#${val}`);
+                        }}
+                        placeholder="EA580C"
+                        maxLength={6}
+                        className="w-24 bg-slate-50 border border-slate-200 rounded-xl pl-6 pr-2 py-1 text-xs font-mono font-bold text-slate-800 uppercase focus:bg-white focus:outline-none focus:border-emerald-500 transition"
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
 

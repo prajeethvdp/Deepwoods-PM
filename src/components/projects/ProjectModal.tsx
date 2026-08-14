@@ -98,11 +98,24 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({ isOpen, onClose }) =
             <div className="flex items-center gap-3">
               <input
                 type="color"
-                value={color}
+                value={color.startsWith('#') ? color : `#${color}`}
                 onChange={(e) => setColor(e.target.value)}
-                className="w-10 h-10 rounded border border-slate-200 cursor-pointer"
+                className="w-8 h-8 rounded border border-slate-200 cursor-pointer p-0.5"
               />
-              <span className="font-mono text-slate-600">{color}</span>
+              <div className="relative flex items-center">
+                <span className="absolute left-2.5 text-slate-400 font-mono text-xs font-bold">#</span>
+                <input
+                  type="text"
+                  value={color.replace(/^#/, '')}
+                  onChange={(e) => {
+                    const val = e.target.value.trim().replace(/[^0-9A-Fa-f]/g, '').slice(0, 6);
+                    setColor(`#${val}`);
+                  }}
+                  placeholder="EA580C"
+                  maxLength={6}
+                  className="w-28 bg-slate-50 border border-slate-200 rounded-xl pl-6 pr-2 py-1.5 text-xs font-mono font-bold text-slate-800 uppercase focus:bg-white focus:outline-none focus:border-cyan-500 transition"
+                />
+              </div>
             </div>
           </div>
 
