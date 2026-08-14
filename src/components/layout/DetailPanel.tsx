@@ -104,7 +104,7 @@ export const DetailPanel: React.FC = () => {
   };
 
   const handleSendReminder = async () => {
-    const success = await sendDeadlineReminder(selectedTask.id);
+    const success = await sendDeadlineReminder(selectedTask.id, user || undefined);
     if (success) {
       setReminderSent(true);
       setTimeout(() => setReminderSent(false), 3000);

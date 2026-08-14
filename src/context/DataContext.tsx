@@ -44,7 +44,7 @@ interface DataContextType {
   setFilterOptions: React.Dispatch<React.SetStateAction<FilterOptions>>;
   
   // Notifications & Emails
-  sendDeadlineReminder: (taskId: string) => Promise<boolean>;
+  sendDeadlineReminder: (taskId: string, senderUser?: TeamMember) => Promise<boolean>;
   markNotificationAsRead: (id: string) => void;
   clearNotifications: () => void;
   
@@ -339,27 +339,50 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   // Trigger Deadline Reminder Email
-  const sendDeadlineReminder = async (taskId: string): Promise<boolean> => {
+  const sendDeadlineReminder = async (taskId: string, senderUser?: TeamMember): Promise<boolean> => {
     const task = tasks.find((t) => t.id === taskId);
     if (!task) return false;
 
-    const assigneeMember = teamMembers.find((m) => m.id === task.assigneeId || m.email.toLowerCase() === (task.assigneeEmail || '').toLowerCase());
-    const assigneeEmail = task.assigneeEmail || assigneeMember?.email || 'member@deepwoodsgreen.com';
-    const assigneeName = assigneeMember?.name || (assigneeEmail.includes('@') ? assigneeEmail.split('@')[0] : 'Team Member');
+    const assigneeMember = teamMembers.find(
+      (m) =>
+        m.id === task.assigneeId ||
+        (m.email && m.email.trim().toLowerCase() === (task.assigneeEmail || task.assigneeId || '').trim().toLowerCase()) ||
+        (m.name && m.name.trim().toLowerCase() === (task.assigneeId || '').trim().toLowerCase())
+    );
+
+    const assigneeEmail =
+      task.assigneeEmail ||
+      assigneeMember?.email ||
+      (task.assigneeId.includes('@') ? task.assigneeId : '');
+
+    if (!assigneeEmail || !assigneeEmail.includes('@')) {
+      alert('Cannot send reminder email: No valid email address found for task assignee.');
+      return false;
+    }
+
+    const assigneeName =
+      assigneeMember?.name ||
+      (assigneeEmail.includes('@') ? assigneeEmail.split('@')[0] : 'Team Member');
 
     const assignee: TeamMember = assigneeMember || {
-      id: task.assigneeId,
+      id: task.assigneeId || `tm-${Date.now()}`,
       name: assigneeName,
       email: assigneeEmail,
-      role: 'Team Member',
-      color: '#2563EB',
+      role: 'Employee',
+      color: '#10B981',
       active: true,
     };
 
     const project = projects.find((p) => p.id === task.projectId);
 
-    const notification = createReminderNotification(task, assignee, project);
+    const notification = createReminderNotification(task, assignee, project, senderUser);
     setEmailNotifications((prev) => [notification, ...prev]);
+
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new Event('deepwoods_notification_updated'));
+      window.dispatchEvent(new Event('storage'));
+    }
+
     return true;
   };
 

@@ -184,6 +184,12 @@ async function dispatchEmailToGmail(
   fullHtml: string,
   attachments?: TaskAttachment[]
 ) {
+  const normalizedRecipient = (recipientEmail || '').trim().toLowerCase();
+  if (!normalizedRecipient || !normalizedRecipient.includes('@')) {
+    console.warn('Invalid recipient email for Gmail dispatch:', recipientEmail);
+    return;
+  }
+
   const attachmentPayload = (attachments || []).map((att) => ({
     fileName: att.fileName,
     fileType: att.fileType,
@@ -191,11 +197,11 @@ async function dispatchEmailToGmail(
   }));
 
   sendAppsScriptAction('sendEmail', {
-    recipientEmail,
+    recipientEmail: normalizedRecipient,
     subject,
     htmlBody: fullHtml,
     attachments: attachmentPayload,
-  });
+  }).catch((err) => console.warn('Gmail dispatch error:', err));
 }
 
 // Dynamic Task Assignment Email
@@ -270,15 +276,16 @@ export function createAssignmentNotification(
 export function createReminderNotification(
   task: Task,
   assignee: TeamMember,
-  project?: Project
+  project?: Project,
+  senderUser?: TeamMember
 ): EmailNotification {
   const projectName = project?.name || 'Decarb Project';
   const firstName = assignee.name.split(' ')[0];
-  const systemAssignor: TeamMember = {
-    id: 'tm-1',
-    name: 'Likhith H',
-    email: 'green@deepwoodsgreen.com',
-    role: 'Full Stack Developer',
+  const assignor: TeamMember = senderUser || {
+    id: 'system-admin',
+    name: 'Workspace Lead',
+    email: 'admin@deepwoodsgreen.com',
+    role: 'Admin',
     color: '#059669',
     active: true,
   };
@@ -313,7 +320,7 @@ export function createReminderNotification(
   `;
 
   const subject = `Reminder: ${task.title} - ${projectName}`;
-  const fullHtml = generateDynamicCompanyEmail(firstName, systemAssignor, mainDynamicContent);
+  const fullHtml = generateDynamicCompanyEmail(firstName, assignor, mainDynamicContent);
 
   dispatchEmailToGmail(assignee.email, subject, fullHtml, attachmentsList);
 
