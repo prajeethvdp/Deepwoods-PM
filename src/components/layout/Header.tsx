@@ -399,29 +399,6 @@ export const Header: React.FC<HeaderProps> = ({
                     ))}
                   </select>
                 </div>
-
-                {/* 5. My Tasks Toggle Switch (Admin & PM only) */}
-                {!isMyTasksView && !isEmployee && user && (
-                  <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
-                    <span className="text-xs font-bold text-slate-700">My Assigned Tasks Only</span>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setFilterOptions((prev) => ({
-                          ...prev,
-                          myTasksOnly: !prev.myTasksOnly,
-                        }))
-                      }
-                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${filterOptions.myTasksOnly ? 'bg-emerald-600' : 'bg-slate-200'
-                        }`}
-                    >
-                      <span
-                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${filterOptions.myTasksOnly ? 'translate-x-6' : 'translate-x-1'
-                          }`}
-                      />
-                    </button>
-                  </div>
-                )}
               </div>
             </div>
           )}

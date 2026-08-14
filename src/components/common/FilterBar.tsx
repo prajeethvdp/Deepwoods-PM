@@ -202,26 +202,6 @@ export const FilterBar: React.FC<FilterBarProps> = ({ currentTab }) => {
             </option>
           ))}
         </select>
-
-        {/* My Tasks Toggle (Admin & PM only) */}
-        {!isMyTasksView && !isEmployee && user && (
-          <button
-            onClick={() =>
-              setFilterOptions((prev) => ({
-                ...prev,
-                myTasksOnly: !prev.myTasksOnly,
-              }))
-            }
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-2xl font-bold transition ${
-              filterOptions.myTasksOnly
-                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-2xs'
-                : 'bg-slate-50 border border-slate-200 text-slate-600 hover:bg-slate-100'
-            }`}
-          >
-            <User className="w-3.5 h-3.5" />
-            <span>My Tasks Only</span>
-          </button>
-        )}
       </div>
 
       {/* Right: Reset Filters */}
