@@ -179,7 +179,7 @@ export const Header: React.FC<HeaderProps> = ({
   });
 
   return (
-    <header className="bg-white rounded-3xl p-2.5 sm:p-3 px-3 sm:px-5 border border-slate-200/80 shadow-xs flex flex-wrap sm:flex-nowrap items-center justify-between gap-2 sm:gap-4 sticky top-0 z-30 select-none">
+    <header className="bg-white rounded-none px-4 sm:px-6 py-3 border-b border-slate-200/80 shadow-2xs flex flex-wrap sm:flex-nowrap items-center justify-between gap-2 sm:gap-4 sticky top-0 z-30 select-none">
       {/* Left: Page Title & Project Dropdown */}
       <div className="flex items-center gap-2.5 sm:gap-4 shrink-0">
         <div className="flex items-center gap-2">

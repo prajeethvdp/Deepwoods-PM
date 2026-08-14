@@ -57,7 +57,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     <>
       {/* DESKTOP SIDEBAR (Clean Light SaaS Design - Restored Logo & Light Colors) */}
       <aside
-        className={`hidden md:flex flex-col justify-between h-full bg-white text-slate-800 border-r border-slate-200/80 shadow-xs select-none flex-shrink-0 z-40 transition-all duration-300 ${
+        className={`hidden md:flex flex-col justify-between h-full bg-white text-slate-800 border-r border-slate-200/80 rounded-none shadow-2xs select-none flex-shrink-0 z-40 transition-all duration-300 ${
           isCollapsed ? 'w-16 p-2.5' : 'w-60 p-4'
         }`}
       >

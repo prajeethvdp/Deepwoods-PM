@@ -83,8 +83,8 @@ const MainApp: React.FC = () => {
   };
 
   return (
-    <div className="flex h-screen w-screen bg-[#EEF2F6] p-1.5 sm:p-2.5 gap-1.5 sm:gap-2.5 overflow-hidden font-sans antialiased pb-16 md:pb-2.5">
-      {/* Floating White Icon Sidebar */}
+    <div className="flex h-screen w-screen bg-[#EEF2F6] overflow-hidden font-sans antialiased">
+      {/* Connected Sidebar */}
       <Sidebar
         currentTab={currentTab}
         setCurrentTab={setCurrentTab}
@@ -94,8 +94,9 @@ const MainApp: React.FC = () => {
         navigateToProject={navigateToProject}
       />
 
-      {/* Main Content Area */}
-      <div className="flex-1 flex flex-col h-full gap-2.5 overflow-hidden">
+      {/* Main Workspace Column */}
+      <div className="flex-1 flex flex-col h-full min-w-0 overflow-hidden">
+        {/* Connected Top Header (No curves) */}
         <Header
           currentTab={currentTab}
           openNewTaskModal={() => openTaskModalWithStatus('To Do')}
@@ -103,7 +104,7 @@ const MainApp: React.FC = () => {
         />
 
         {/* Dynamic View Container */}
-        <main className="flex-1 overflow-y-auto relative rounded-2xl">
+        <main className="flex-1 overflow-y-auto relative pb-16 md:pb-0">
           {renderTabContent()}
         </main>
       </div>
