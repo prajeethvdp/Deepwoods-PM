@@ -70,11 +70,7 @@ const MainApp: React.FC = () => {
       case 'calendar':
         return <CalendarView onAddDateTask={(dateStr) => openTaskModalWithStatus('To Do', dateStr)} />;
       case 'my-tasks':
-        return (
-          <div className="h-full overflow-hidden">
-            <Board openTaskModalWithStatus={openTaskModalWithStatus} isMyTasksView={true} />
-          </div>
-        );
+        return <DashboardPage />;
       case 'team':
         return <TeamPage />;
       default:

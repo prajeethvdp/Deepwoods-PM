@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, FolderPlus, Loader2 } from 'lucide-react';
 import { useData } from '../../context/DataContext';
+import { useAuth } from '../../context/AuthContext';
 
 interface ProjectModalProps {
   isOpen: boolean;
@@ -9,6 +10,7 @@ interface ProjectModalProps {
 
 export const ProjectModal: React.FC<ProjectModalProps> = ({ isOpen, onClose }) => {
   const { createProject } = useData();
+  const { canManageProjects } = useAuth();
 
   const [name, setName] = useState('');
   const [clientName, setClientName] = useState('');
@@ -24,6 +26,10 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({ isOpen, onClose }) =
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!canManageProjects) {
+      alert('Only Admins and Product Managers can create new projects.');
+      return;
+    }
     if (!name.trim()) return;
 
     setIsSaving(true);

@@ -51,7 +51,7 @@ export const Header: React.FC<HeaderProps> = ({
     isSyncing,
     syncWithGoogleSheets,
   } = useData();
-  const { user, logout } = useAuth();
+  const { user, logout, userRole, isEmployee } = useAuth();
 
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const filterPopoverRef = useRef<HTMLDivElement>(null);
@@ -337,7 +337,7 @@ export const Header: React.FC<HeaderProps> = ({
                       <option value="ALL">All Team Members ({teamMembers.length})</option>
                       {teamMembers.map((member) => (
                         <option key={member.id} value={member.id}>
-                          {member.name} ({member.role || 'Member'})
+                          {member.name} ({member.role || 'Employee'})
                         </option>
                       ))}
                     </select>
@@ -429,24 +429,42 @@ export const Header: React.FC<HeaderProps> = ({
           <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin text-emerald-600' : ''}`} />
         </button>
 
-        {/* Primary Action Button: New Task */}
-        <button
-          onClick={openNewTaskModal}
-          className="flex items-center gap-1.5 px-4 py-2 bg-[#059669] hover:bg-[#047857] text-white rounded-full text-xs font-bold shadow-xs transition transform active:scale-95"
-        >
-          <Plus className="w-4 h-4" />
-          <span>New Task</span>
-        </button>
+        {/* Primary Action Button: New Task (Hidden for Employees) */}
+        {!isEmployee && (
+          <button
+            onClick={openNewTaskModal}
+            className="flex items-center gap-1.5 px-4 py-2 bg-[#059669] hover:bg-[#047857] text-white rounded-full text-xs font-bold shadow-xs transition transform active:scale-95"
+          >
+            <Plus className="w-4 h-4" />
+            <span>New Task</span>
+          </button>
+        )}
 
-        {/* User Badge Avatar */}
+        {/* User Badge Avatar & Role */}
         {user && (
           <div className="flex items-center gap-2 pl-2 border-l border-slate-200">
-            <div
-              className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold shadow-xs cursor-pointer ring-2 ring-white"
-              style={{ backgroundColor: user.color }}
-              title={`${user.name} (${user.role})`}
-            >
-              {user.name.charAt(0)}
+            <div className="flex items-center gap-2">
+              <div
+                className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold shadow-xs ring-2 ring-white"
+                style={{ backgroundColor: user.color }}
+                title={`${user.name} (${userRole})`}
+              >
+                {user.name.charAt(0)}
+              </div>
+              <div className="hidden xl:flex flex-col text-left leading-tight">
+                <span className="text-xs font-bold text-slate-800">{user.name}</span>
+                <span
+                  className={`text-[9px] font-extrabold tracking-wider uppercase px-1.5 py-0.2 rounded-md border w-fit ${
+                    userRole === 'Admin'
+                      ? 'bg-purple-50 text-purple-700 border-purple-200'
+                      : userRole === 'Product Manager'
+                      ? 'bg-blue-50 text-blue-700 border-blue-200'
+                      : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                  }`}
+                >
+                  {userRole}
+                </span>
+              </div>
             </div>
 
             <button

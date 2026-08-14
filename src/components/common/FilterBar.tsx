@@ -163,7 +163,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({ currentTab }) => {
               <option value="ALL">All Team Members ({teamMembers.length})</option>
               {teamMembers.map((member) => (
                 <option key={member.id} value={member.id}>
-                  {member.name} ({member.role || 'Member'})
+                  {member.name} ({member.role || 'Employee'})
                 </option>
               ))}
             </select>

@@ -22,7 +22,7 @@ interface BoardProps {
 
 export const Board: React.FC<BoardProps> = ({ openTaskModalWithStatus, isMyTasksView = false }) => {
   const { tasks, updateTaskStatus, selectedProjectId, filterOptions } = useData();
-  const { user } = useAuth();
+  const { user, isEmployee } = useAuth();
 
   const [activeTask, setActiveTask] = useState<Task | null>(null);
 
@@ -36,8 +36,8 @@ export const Board: React.FC<BoardProps> = ({ openTaskModalWithStatus, isMyTasks
 
   // Apply project and filter criteria
   const filteredTasks = tasks.filter((t) => {
-    // Strictly filter to user's tasks if in My Tasks View
-    if (isMyTasksView && user && t.assigneeId !== user.id) {
+    // Strictly filter to user's tasks if Employee or in My Tasks View
+    if ((isEmployee || isMyTasksView) && user && t.assigneeId !== user.id) {
       return false;
     }
     // Project filter

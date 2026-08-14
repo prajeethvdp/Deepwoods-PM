@@ -1,7 +1,8 @@
-import React, { createContext, useContext, useState } from 'react';
-import { TeamMember } from '../types';
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import { TeamMember, UserRole } from '../types';
 import { loadTeamFromStorage, saveTeamToStorage, sendAppsScriptAction, resetPasswordInBackend } from '../lib/sheets';
 import { hashPassword, verifyPassword } from '../lib/cryptoUtils';
+import { normalizeRole, canManageTeam, canManageProjects, canAccessTeamPage } from '../lib/permissions';
 
 const PASSWORDS_STORAGE_KEY = 'deepwoods_user_passwords';
 const OTP_STORAGE_KEY = 'deepwoods_password_reset_otps';
@@ -24,6 +25,13 @@ const setStoredPassword = (email: string, hashedPassword: string) => {
 interface AuthContextType {
   user: TeamMember | null;
   isAuthenticated: boolean;
+  userRole: UserRole;
+  isAdmin: boolean;
+  isProductManager: boolean;
+  isEmployee: boolean;
+  canManageTeam: boolean;
+  canManageProjects: boolean;
+  canAccessTeamPage: boolean;
   verifyGoogleUser: (email: string, name: string) => Promise<{ success: boolean; user?: TeamMember; error?: string }>;
   completeLogin: (user: TeamMember) => void;
   loginWithGoogle: (email: string, name: string) => Promise<{ success: boolean; user?: TeamMember; error?: string }>;
@@ -32,6 +40,7 @@ interface AuthContextType {
   sendPasswordResetOTP: (email: string) => Promise<{ success: boolean; error?: string; message?: string }>;
   verifyOTPAndResetPassword: (email: string, otpCode: string, newPassword: string) => Promise<{ success: boolean; error?: string; message?: string }>;
   resetPassword: (email: string, newPassword: string) => Promise<{ success: boolean; error?: string; message?: string }>;
+  refreshUser: (providedTeam?: TeamMember[]) => void;
   logout: () => void;
 }
 
@@ -99,6 +108,45 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     return { team, backendSynced };
   };
+
+  const refreshUser = (providedTeam?: TeamMember[]) => {
+    const savedUserId = localStorage.getItem('deepwoods_auth_user_id');
+    if (!savedUserId) return;
+
+    const team = providedTeam || loadTeamFromStorage();
+    const passMap = getStoredPasswordMap();
+    const found = team.find(
+      (m) => m.id === savedUserId || (user && m.email && m.email.trim().toLowerCase() === user.email.trim().toLowerCase())
+    );
+
+    if (found) {
+      const normEmail = (found.email || '').trim().toLowerCase();
+      const updatedUser: TeamMember = {
+        ...found,
+        password: found.password || passMap[normEmail] || (user ? user.password : ''),
+      };
+
+      setUser((prev) => {
+        if (!prev) return updatedUser;
+        if (
+          prev.role !== updatedUser.role ||
+          prev.name !== updatedUser.name ||
+          prev.active !== updatedUser.active ||
+          prev.email !== updatedUser.email
+        ) {
+          return updatedUser;
+        }
+        return prev;
+      });
+    }
+  };
+
+  // Auto-sync logged in user details/roles on mount from Google Apps Script backend
+  useEffect(() => {
+    fetchLatestTeam().then(({ team }) => {
+      refreshUser(team);
+    });
+  }, []);
 
   const completeLogin = (userToLogin: TeamMember) => {
     setUser(userToLogin);
@@ -385,11 +433,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.removeItem('deepwoods_auth_user_id');
   };
 
+  const userRole = normalizeRole(user?.role);
+  const isAdmin = userRole === 'Admin';
+  const isProductManager = userRole === 'Product Manager';
+  const isEmployee = userRole === 'Employee';
+
   return (
     <AuthContext.Provider
       value={{
         user,
         isAuthenticated: !!user,
+        userRole,
+        isAdmin,
+        isProductManager,
+        isEmployee,
+        canManageTeam: canManageTeam(user?.role),
+        canManageProjects: canManageProjects(user?.role),
+        canAccessTeamPage: canAccessTeamPage(user?.role),
         verifyGoogleUser,
         completeLogin,
         loginWithGoogle,
@@ -398,6 +458,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         sendPasswordResetOTP,
         verifyOTPAndResetPassword,
         resetPassword,
+        refreshUser,
         logout,
       }}
     >

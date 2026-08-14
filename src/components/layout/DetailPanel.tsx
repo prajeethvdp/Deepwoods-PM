@@ -21,6 +21,7 @@ import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
 import { Priority, TaskStatus, TaskAttachment } from '../../types';
 import { PRIORITY_CONFIG, STATUS_CONFIG } from '../../lib/constants';
+import { canDeleteTask } from '../../lib/permissions';
 import { isBefore, startOfDay } from 'date-fns';
 import { toYYYYMMDD } from '../../lib/dateUtils';
 
@@ -40,7 +41,7 @@ export const DetailPanel: React.FC = () => {
     removeAttachmentFromTask,
   } = useData();
 
-  const { user } = useAuth();
+  const { user, isEmployee } = useAuth();
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -186,13 +187,15 @@ export const DetailPanel: React.FC = () => {
               <span>{reminderSent ? 'Reminder Sent!' : 'Remind Deadline'}</span>
             </button>
 
-            <button
-              onClick={() => setShowDeleteConfirm(true)}
-              className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
-              title="Delete Task"
-            >
-              <Trash2 className="w-4 h-4" />
-            </button>
+            {canDeleteTask(user?.role, selectedTask, user?.id) && (
+              <button
+                onClick={() => setShowDeleteConfirm(true)}
+                className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
+                title="Delete Task"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            )}
             <button
               onClick={closeTaskDetail}
               className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-200 rounded-lg transition"
@@ -272,11 +275,12 @@ export const DetailPanel: React.FC = () => {
               <div className="col-span-2">
                 <select
                   value={assigneeId}
+                  disabled={isEmployee}
                   onChange={(e) => {
                     setAssigneeId(e.target.value);
                     handleFieldChange('assigneeId', e.target.value);
                   }}
-                  className="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 font-medium text-slate-800 focus:outline-none focus:ring-1 focus:ring-cyan-500"
+                  className="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 font-medium text-slate-800 focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-75 disabled:bg-slate-100 disabled:cursor-not-allowed"
                 >
                   {teamMembers.map((m) => (
                     <option key={m.id} value={m.id}>

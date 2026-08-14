@@ -17,6 +17,7 @@ import {
   Command,
 } from 'lucide-react';
 import { useData } from '../../context/DataContext';
+import { useAuth } from '../../context/AuthContext';
 
 interface CommandPaletteProps {
   isOpen: boolean;
@@ -34,6 +35,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
   openNewProjectModal,
 }) => {
   const { tasks, projects, openTaskDetail } = useData();
+  const { canManageProjects, canAccessTeamPage, isEmployee } = useAuth();
   const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -67,20 +69,27 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
   if (!isOpen) return null;
 
   // Build command items with explicit type definitions
-  const navItems = [
+  const allNavItems = [
     { type: 'nav', id: 'dashboard', label: 'Go to Dashboard', subLabel: 'View project KPIs & metrics', icon: LayoutDashboard, category: 'Navigation' },
     { type: 'nav', id: 'kanban', label: 'Go to Kanban Board', subLabel: 'Manage task workflow columns', icon: Kanban, category: 'Navigation' },
     { type: 'nav', id: 'gantt', label: 'Go to Gantt Chart', subLabel: 'Timeline & schedule view', icon: GanttChartSquare, category: 'Navigation' },
     { type: 'nav', id: 'list', label: 'Go to List View', subLabel: 'Tabular task list view', icon: ListTodo, category: 'Navigation' },
     { type: 'nav', id: 'calendar', label: 'Go to Calendar View', subLabel: 'Monthly deadline calendar', icon: Calendar, category: 'Navigation' },
-    { type: 'nav', id: 'my-tasks', label: 'Go to My Tasks', subLabel: 'Filter assigned tasks', icon: UserCheck, category: 'Navigation' },
-    { type: 'nav', id: 'team', label: 'Go to Team Settings', subLabel: 'Workspace members & roles', icon: Users, category: 'Navigation' },
+    { type: 'nav', id: 'team', label: 'Go to Team Settings', subLabel: 'Workspace members & roles', icon: Users, category: 'Navigation', adminOrPmOnly: true },
   ];
 
-  const actionItems = [
-    { type: 'action', id: 'create-task', label: 'Create New Task', subLabel: 'Add a new task item', icon: Plus, category: 'Actions', handler: openNewTaskModal },
-    { type: 'action', id: 'create-project', label: 'Create New Project', subLabel: 'Add a new project folder', icon: FolderPlus, category: 'Actions', handler: openNewProjectModal },
+  const navItems = allNavItems.filter((item) => !item.adminOrPmOnly || canAccessTeamPage);
+
+  const allActionItems = [
+    { type: 'action', id: 'create-task', label: 'Create New Task', subLabel: 'Add a new task item', icon: Plus, category: 'Actions', handler: openNewTaskModal, adminOrPmOnly: true },
+    { type: 'action', id: 'create-project', label: 'Create New Project', subLabel: 'Add a new project folder', icon: FolderPlus, category: 'Actions', handler: openNewProjectModal, pmOnly: true },
   ];
+
+  const actionItems = allActionItems.filter((item) => {
+    if (item.id === 'create-task' && isEmployee) return false;
+    if (item.pmOnly && !canManageProjects) return false;
+    return true;
+  });
 
   const filteredTasks = query.trim()
     ? tasks

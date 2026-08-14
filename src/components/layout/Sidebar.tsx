@@ -33,7 +33,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   navigateToProject,
 }) => {
   const { tasks, projects, deleteProject } = useData();
-  const { user, logout } = useAuth();
+  const { user, logout, canManageProjects, canAccessTeamPage } = useAuth();
   const [projectsOpen, setProjectsOpen] = useState(false);
 
   const myTasksCount = useMemo(() => {
@@ -41,15 +41,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
     return tasks.filter((t) => t.assigneeId === user.id && t.status !== 'Done').length;
   }, [tasks, user]);
 
-  const navItems = [
+  const allNavItems: { id: string; label: string; shortLabel: string; icon: any; adminOrPmOnly?: boolean; badge?: number }[] = [
     { id: 'dashboard', label: 'Dashboard', shortLabel: 'Home', icon: LayoutDashboard },
     { id: 'kanban', label: 'Kanban Board', shortLabel: 'Kanban', icon: Kanban },
     { id: 'gantt', label: 'Gantt Chart', shortLabel: 'Gantt', icon: GanttChartSquare },
     { id: 'list', label: 'List View', shortLabel: 'List', icon: ListTodo },
     { id: 'calendar', label: 'Calendar View', shortLabel: 'Calendar', icon: Calendar },
-    { id: 'my-tasks', label: 'My Tasks', shortLabel: 'Mine', icon: UserCheck, badge: myTasksCount },
-    { id: 'team', label: 'Team Settings', shortLabel: 'Team', icon: Users },
+    { id: 'team', label: 'Team Settings', shortLabel: 'Team', icon: Users, adminOrPmOnly: true },
   ];
+
+  const navItems = useMemo(() => {
+    return allNavItems.filter((item) => !item.adminOrPmOnly || canAccessTeamPage);
+  }, [canAccessTeamPage, myTasksCount]);
 
   return (
     <>
@@ -151,28 +154,32 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       >
                         {proj.name}
                       </span>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (window.confirm(`Delete project "${proj.name}"? This cannot be undone.`)) {
-                            deleteProject(proj.id);
-                          }
-                        }}
-                        className="opacity-0 group-hover/proj:opacity-100 p-0.5 rounded text-slate-400 hover:text-red-500 hover:bg-red-50 transition flex-shrink-0"
-                        title="Delete project"
-                      >
-                        <Trash2 className="w-3 h-3" />
-                      </button>
+                      {canManageProjects && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (window.confirm(`Delete project "${proj.name}"? This cannot be undone.`)) {
+                              deleteProject(proj.id);
+                            }
+                          }}
+                          className="opacity-0 group-hover/proj:opacity-100 p-0.5 rounded text-slate-400 hover:text-red-500 hover:bg-red-50 transition flex-shrink-0"
+                          title="Delete project"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                      )}
                     </div>
                   ))
                 )}
-                <button
-                  onClick={openNewProjectModal}
-                  className="flex items-center gap-2 px-2 py-1.5 rounded-xl text-emerald-600 hover:bg-emerald-50 transition font-bold text-[11px] mt-0.5"
-                >
-                  <FolderPlus className="w-3.5 h-3.5 shrink-0" />
-                  <span>New Project</span>
-                </button>
+                {canManageProjects && (
+                  <button
+                    onClick={openNewProjectModal}
+                    className="flex items-center gap-2 px-2 py-1.5 rounded-xl text-emerald-600 hover:bg-emerald-50 transition font-bold text-[11px] mt-0.5"
+                  >
+                    <FolderPlus className="w-3.5 h-3.5 shrink-0" />
+                    <span>New Project</span>
+                  </button>
+                )}
               </div>
             )}
           </div>

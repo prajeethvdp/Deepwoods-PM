@@ -21,6 +21,7 @@ import {
   createCompletionNotification,
   generateDynamicCompanyEmail,
 } from '../lib/emailService';
+import { useAuth } from './AuthContext';
 
 interface DataContextType {
   tasks: Task[];
@@ -117,6 +118,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [sheetsConfig] = useState<SheetsConfig>(() => getSheetsConfig());
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
 
+  const { refreshUser } = useAuth();
+
   // Sync state changes to local storage
   useEffect(() => {
     saveTasksToStorage(tasks);
@@ -128,6 +131,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     saveTeamToStorage(teamMembers);
+    refreshUser(teamMembers);
   }, [teamMembers]);
 
   useEffect(() => {
@@ -310,6 +314,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setProjects(syncedData.projects || []);
         setTeamMembers(syncedData.teamMembers || []);
         setComments(syncedData.comments || []);
+        if (syncedData.teamMembers && syncedData.teamMembers.length > 0) {
+          refreshUser(syncedData.teamMembers);
+        }
       }
     } finally {
       setIsSyncing(false);

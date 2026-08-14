@@ -50,10 +50,12 @@ export interface Project {
   createdAt: string;
 }
 
+export type UserRole = 'Admin' | 'Product Manager' | 'Employee';
+
 export interface TeamMember {
   id: string;
   name: string;
-  role: string;
+  role: UserRole | string;
   email: string;
   color: string;
   active: boolean;

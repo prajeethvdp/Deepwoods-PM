@@ -20,7 +20,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
   defaultDate,
 }) => {
   const { createTask, projects, teamMembers, selectedProjectId } = useData();
-  const { user } = useAuth();
+  const { user, isEmployee } = useAuth();
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -54,7 +54,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
     }
   }, [isOpen, defaultStatus, defaultDate, selectedProjectId, projects, teamMembers, user]);
 
-  if (!isOpen) return null;
+  if (!isOpen || isEmployee) return null;
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;

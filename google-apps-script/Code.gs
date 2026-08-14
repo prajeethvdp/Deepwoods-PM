@@ -241,13 +241,19 @@ function setupSheet(spreadsheet, name, headers) {
     sheet.appendRow(headers);
     sheet.getRange(1, 1, 1, headers.length).setFontWeight('bold').setBackground('#E2E8F0');
     sheet.setFrozenRows(1);
-    applySheetValidationRules(sheet, name);
   }
+  applySheetValidationRules(sheet, name);
 }
 
 function applySheetValidationRules(sheet, name) {
   try {
     if (name === SHEET_NAMES.TEAM) {
+      const roleRule = SpreadsheetApp.newDataValidation()
+        .requireValueInList(['Admin', 'Product Manager', 'Employee'], true)
+        .setAllowInvalid(true)
+        .build();
+      sheet.getRange('C2:C500').setDataValidation(roleRule);
+
       const activeRule = SpreadsheetApp.newDataValidation()
         .requireValueInList(['TRUE', 'FALSE'], true)
         .setAllowInvalid(true)
@@ -457,4 +463,32 @@ function commentToRow(comm) {
 function createJsonResponse(data) {
   return ContentService.createTextOutput(JSON.stringify(data))
     .setMimeType(ContentService.MimeType.JSON);
+}
+
+/**
+ * Run this function manually in Apps Script editor to update dropdown validations on Google Sheets
+ */
+function setupSheetValidations() {
+  const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+  ensureSheetsExist(spreadsheet);
+
+  // Auto-clean any existing 'Member' entries to 'Employee'
+  const teamSheet = getSheetByNameFlexible(spreadsheet, SHEET_NAMES.TEAM);
+  if (teamSheet && teamSheet.getLastRow() > 1) {
+    const range = teamSheet.getRange(2, 3, teamSheet.getLastRow() - 1, 1);
+    const values = range.getValues();
+    let updatedCount = 0;
+    for (let i = 0; i < values.length; i++) {
+      if (String(values[i][0]).trim().toLowerCase() === 'member') {
+        values[i][0] = 'Employee';
+        updatedCount++;
+      }
+    }
+    if (updatedCount > 0) {
+      range.setValues(values);
+      Logger.log('Updated ' + updatedCount + ' legacy "Member" roles to "Employee"');
+    }
+  }
+
+  Logger.log('Google Sheets validation rules applied successfully!');
 }

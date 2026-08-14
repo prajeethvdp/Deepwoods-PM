@@ -13,6 +13,8 @@ import {
   ClipboardList,
   Check,
   Hourglass,
+  User,
+  Shield,
 } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { useData } from '../context/DataContext';
@@ -41,7 +43,7 @@ const safeParseDate = (dateStr: string | undefined | null): Date | null => {
 
 export const DashboardPage: React.FC = () => {
   const { tasks, projects, teamMembers, openTaskDetail, selectedProjectId, filterOptions } = useData();
-  const { user } = useAuth();
+  const { user, isEmployee } = useAuth();
   const [dueTab, setDueTab] = useState<'today' | 'week' | 'overdue'>('today');
 
   // 1. Multi-attribute Filter Application
@@ -114,23 +116,26 @@ export const DashboardPage: React.FC = () => {
     return true;
   });
 
-  // 4. Real KPI Stat Calculations
-  const totalTasksCount = activeTasks.length;
-  const inProgressTasks = activeTasks.filter((t) => t.status === 'In Progress');
+  // 4. Role-Differentiated KPI Stat Calculations
+  // Employees view metrics for tasks assigned to them; Admins/PMs view workspace-wide metrics.
+  const relevantTasks = isEmployee && user ? activeTasks.filter((t) => t.assigneeId === user.id) : activeTasks;
 
-  const overdueTasks = activeTasks.filter((t) => {
+  const totalTasksCount = relevantTasks.length;
+  const inProgressTasks = relevantTasks.filter((t) => t.status === 'In Progress');
+
+  const overdueTasks = relevantTasks.filter((t) => {
     if (t.status === 'Done') return false;
     const dueDate = safeParseDate(t.dueDate);
     return dueDate && isBefore(startOfDay(dueDate), today);
   });
 
-  const dueTodayTasks = activeTasks.filter((t) => {
+  const dueTodayTasks = relevantTasks.filter((t) => {
     if (t.status === 'Done') return false;
     const dueDate = safeParseDate(t.dueDate);
     return dueDate && isSameDay(startOfDay(dueDate), today);
   });
 
-  const dueThisWeekTasks = activeTasks.filter((t) => {
+  const dueThisWeekTasks = relevantTasks.filter((t) => {
     if (t.status === 'Done') return false;
     const dueDate = safeParseDate(t.dueDate);
     if (!dueDate) return false;
@@ -138,6 +143,10 @@ export const DashboardPage: React.FC = () => {
     const diffDays = (dueStart.getTime() - today.getTime()) / (1000 * 3600 * 24);
     return diffDays >= 0 && diffDays <= 7;
   });
+
+  const completedInDateRangeRelevant = completedInDateRange.filter((t) =>
+    isEmployee && user ? t.assigneeId === user.id : true
+  );
 
   // Active Due Tasks list based on selected tab
   const activeDueList = dueTab === 'today' ? dueTodayTasks : dueTab === 'week' ? dueThisWeekTasks : overdueTasks;
@@ -150,7 +159,7 @@ export const DashboardPage: React.FC = () => {
     Done: 0,
   };
 
-  activeTasks.forEach((t) => {
+  relevantTasks.forEach((t) => {
     if (statusCounts[t.status] !== undefined) {
       statusCounts[t.status]++;
     }
@@ -169,14 +178,43 @@ export const DashboardPage: React.FC = () => {
     color: chartColors[status] || STATUS_CONFIG[status].color,
   }));
 
+  // Card Labels based on Role
+  const card1Title = isEmployee ? 'MY ASSIGNED TASKS' : 'TOTAL TASKS';
+  const card1Sub = isEmployee
+    ? `Personal Workload Across ${displayProjects.length} ${displayProjects.length === 1 ? 'Project' : 'Projects'}`
+    : `Across ${displayProjects.length} ${displayProjects.length === 1 ? 'Project' : 'Projects'}`;
+
+  const card2Title = isEmployee ? 'MY OVERDUE TASKS' : 'OVERDUE TASKS';
+  const card2Sub = isEmployee
+    ? overdueTasks.length > 0 ? 'Personal Action Required' : 'No Overdue Tasks'
+    : overdueTasks.length > 0 ? 'Requires Immediate Attention' : 'All Tasks On Schedule';
+
+  const card3Title = isEmployee ? 'MY IN PROGRESS' : 'IN PROGRESS';
+  const card3Sub = isEmployee ? 'Your Active Assigned Tasks' : 'Currently Under Active Work';
+
+  const card4Title = isEmployee ? `MY ${dateTitle.toUpperCase()}` : dateTitle.toUpperCase();
+  const card4Sub = isEmployee ? `Your Accomplishments (${dateSubtext})` : dateSubtext;
+
   return (
     <div className="w-full min-h-full bg-[#EEF2F6] p-4 md:p-5 space-y-5 text-slate-800 font-sans select-none">
+      {/* Employee Personal Greeting Header */}
+      {isEmployee && (
+        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-2xs flex flex-wrap items-center justify-between gap-4">
+          <div className="space-y-1">
+            <h1 className="text-xl font-bold text-slate-900 font-serif">Welcome back, {user?.name || 'Team Member'} 👋</h1>
+            <p className="text-xs text-slate-500 font-medium">
+              You have <strong className="text-slate-900">{dueTodayTasks.length} task(s)</strong> due today and <strong className="text-amber-600">{inProgressTasks.length} task(s)</strong> currently in progress.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Row 1: Stat Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-        {/* 1. TOTAL TASKS */}
+        {/* 1. TOTAL / MY ASSIGNED TASKS */}
         <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-2xs flex flex-col justify-between h-32">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider">TOTAL TASKS</span>
+            <span className="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider">{card1Title}</span>
             <div className="w-7 h-7 rounded-lg border border-slate-200 text-slate-700 flex items-center justify-center bg-slate-50 shadow-2xs">
               <ClipboardList className="w-4 h-4" />
             </div>
@@ -184,15 +222,15 @@ export const DashboardPage: React.FC = () => {
           <div className="flex items-end justify-between">
             <div className="text-3xl font-extrabold text-slate-900 leading-none">{totalTasksCount}</div>
             <div className="text-right">
-              <span className="text-[10px] text-slate-400 font-medium block">Across {displayProjects.length} {displayProjects.length === 1 ? 'Project' : 'Projects'}</span>
+              <span className="text-[10px] text-slate-400 font-medium block truncate max-w-[120px]" title={card1Sub}>{card1Sub}</span>
             </div>
           </div>
         </div>
 
-        {/* 2. OVERDUE TASKS */}
+        {/* 2. OVERDUE TASKS / MY OVERDUE */}
         <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-2xs flex flex-col justify-between h-32">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider">OVERDUE TASKS</span>
+            <span className="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider">{card2Title}</span>
             <div className="w-7 h-7 rounded-lg border border-slate-200 text-slate-700 flex items-center justify-center bg-slate-50 shadow-2xs">
               <AlertCircle className="w-4 h-4" />
             </div>
@@ -202,17 +240,17 @@ export const DashboardPage: React.FC = () => {
               {overdueTasks.length}
             </div>
             <div className="text-right">
-              <span className="text-[10px] text-slate-400 font-medium block">
-                {overdueTasks.length > 0 ? 'Requires Immediate Attention' : 'All Tasks On Schedule'}
+              <span className="text-[10px] text-slate-400 font-medium block truncate max-w-[120px]" title={card2Sub}>
+                {card2Sub}
               </span>
             </div>
           </div>
         </div>
 
-        {/* 3. IN PROGRESS */}
+        {/* 3. IN PROGRESS / MY IN PROGRESS */}
         <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-2xs flex flex-col justify-between h-32">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider">IN PROGRESS</span>
+            <span className="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider">{card3Title}</span>
             <div className="w-7 h-7 rounded-lg border border-slate-200 text-slate-700 flex items-center justify-center bg-slate-50 shadow-2xs">
               <Clock className="w-4 h-4" />
             </div>
@@ -220,26 +258,26 @@ export const DashboardPage: React.FC = () => {
           <div className="flex items-end justify-between">
             <div className="text-3xl font-extrabold text-slate-900 leading-none">{inProgressTasks.length}</div>
             <div className="text-right">
-              <span className="text-[10px] text-slate-400 font-medium block">Currently Under Active Work</span>
+              <span className="text-[10px] text-slate-400 font-medium block truncate max-w-[120px]" title={card3Sub}>{card3Sub}</span>
             </div>
           </div>
         </div>
 
-        {/* 4. DONE TODAY / DATE RANGE */}
+        {/* 4. DONE / MY COMPLETED */}
         <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-2xs flex flex-col justify-between h-32">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider truncate" title={dateTitle}>
-              {dateTitle.toUpperCase()}
+            <span className="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider truncate" title={card4Title}>
+              {card4Title}
             </span>
             <div className="w-7 h-7 rounded-lg border border-slate-200 text-slate-700 flex items-center justify-center bg-slate-50 shadow-2xs shrink-0">
               <Check className="w-4 h-4" />
             </div>
           </div>
           <div className="flex items-end justify-between">
-            <div className="text-3xl font-extrabold text-slate-900 leading-none">{completedInDateRange.length}</div>
+            <div className="text-3xl font-extrabold text-slate-900 leading-none">{completedInDateRangeRelevant.length}</div>
             <div className="text-right min-w-0 pl-2">
-              <span className="text-[10px] text-slate-400 font-medium block truncate" title={dateSubtext}>
-                {dateSubtext}
+              <span className="text-[10px] text-slate-400 font-medium block truncate" title={card4Sub}>
+                {card4Sub}
               </span>
             </div>
           </div>
@@ -342,9 +380,11 @@ export const DashboardPage: React.FC = () => {
           {/* 2. Tasks Overview Data Table */}
           <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-2xs space-y-4">
             <div className="flex items-center justify-between">
-              <h2 className="text-base font-bold text-slate-900 font-serif">Tasks overview</h2>
+              <h2 className="text-base font-bold text-slate-900 font-serif">
+                {isEmployee ? 'My Assigned Tasks' : 'Tasks overview'}
+              </h2>
               <span className="text-xs font-semibold text-slate-400">
-                Showing {Math.min(6, activeTasks.length)} of {activeTasks.length} tasks
+                Showing {Math.min(6, relevantTasks.length)} of {relevantTasks.length} tasks
               </span>
             </div>
 
@@ -361,14 +401,14 @@ export const DashboardPage: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 font-medium">
-                  {activeTasks.length === 0 ? (
+                  {relevantTasks.length === 0 ? (
                     <tr>
                       <td colSpan={6} className="py-6 text-center text-slate-400 italic">
-                        No tasks match selected project/filters.
+                        {isEmployee ? 'You have no assigned tasks matching selected filters.' : 'No tasks match selected project/filters.'}
                       </td>
                     </tr>
                   ) : (
-                    activeTasks.slice(0, 6).map((task, index) => {
+                    relevantTasks.slice(0, 6).map((task, index) => {
                       const proj = projects.find((p) => p.id === task.projectId);
                       const priorityText = task.priority;
                       const statusColors: Record<TaskStatus, string> = {
@@ -426,7 +466,9 @@ export const DashboardPage: React.FC = () => {
         <div className="lg:col-span-2 space-y-5">
           {/* 1. Tasks Progress Donut */}
           <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-2xs space-y-3">
-            <h2 className="text-base font-bold text-slate-900 font-serif">Tasks progress</h2>
+            <h2 className="text-base font-bold text-slate-900 font-serif">
+              {isEmployee ? 'My Task Progress' : 'Tasks progress'}
+            </h2>
 
             <div className="relative h-40 w-full my-1 flex items-center justify-center">
               <ResponsiveContainer width="100%" height="100%">
@@ -462,7 +504,7 @@ export const DashboardPage: React.FC = () => {
               </ResponsiveContainer>
 
               <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                <span className="text-[10px] font-semibold text-slate-400">Total task</span>
+                <span className="text-[10px] font-semibold text-slate-400">{isEmployee ? 'My Tasks' : 'Total task'}</span>
                 <span className="text-2xl font-extrabold text-slate-900">{totalTasksCount}</span>
               </div>
             </div>

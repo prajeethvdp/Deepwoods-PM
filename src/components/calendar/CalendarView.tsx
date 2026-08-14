@@ -10,6 +10,7 @@ import {
   Plus,
 } from 'lucide-react';
 import { useData } from '../../context/DataContext';
+import { useAuth } from '../../context/AuthContext';
 import { Task, TaskStatus } from '../../types';
 import { STATUS_CONFIG } from '../../lib/constants';
 
@@ -19,9 +20,12 @@ interface CalendarViewProps {
 
 export const CalendarView: React.FC<CalendarViewProps> = ({ onAddDateTask }) => {
   const { tasks, projects, teamMembers, openTaskDetail, filterOptions } = useData();
+  const { user, isEmployee } = useAuth();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const [assigneeFilter, setAssigneeFilter] = useState<string>('ALL');
+
+  const canAddTask = !isEmployee && !!onAddDateTask;
 
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
@@ -53,6 +57,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ onAddDateTask }) => 
 
   // Scheduled tasks filtering — uses global header search
   const filteredTasks = tasks.filter((t) => {
+    if (isEmployee && user && t.assigneeId !== user.id) return false;
     const matchesSearch = !filterOptions.searchQuery ||
       t.title.toLowerCase().includes(filterOptions.searchQuery.toLowerCase()) ||
       (t.description || '').toLowerCase().includes(filterOptions.searchQuery.toLowerCase());
@@ -177,7 +182,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ onAddDateTask }) => 
                   key={`day-${dayNum}`}
                   onClick={(e) => {
                     // Only trigger if cell background clicked directly
-                    if (e.target === e.currentTarget && onAddDateTask) {
+                    if (e.target === e.currentTarget && canAddTask && onAddDateTask) {
                       onAddDateTask(cellDateStr);
                     }
                   }}
@@ -197,7 +202,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ onAddDateTask }) => 
                       >
                         {dayNum}
                       </span>
-                      {onAddDateTask && (
+                      {canAddTask && onAddDateTask && (
                         <button
                           onClick={(e) => {
                             e.stopPropagation();

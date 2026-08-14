@@ -52,7 +52,7 @@ export const ListViewPage: React.FC<ListViewPageProps> = ({
   openTaskModalWithStatus,
 }) => {
   const { tasks, projects, teamMembers, openTaskDetail, selectedProjectId, filterOptions } = useData();
-  const { user } = useAuth();
+  const { user, isEmployee } = useAuth();
 
   // Collapsible state for each status section
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({
@@ -70,7 +70,7 @@ export const ListViewPage: React.FC<ListViewPageProps> = ({
 
   // Filter tasks based on global filter settings
   const filteredTasks = tasks.filter((t) => {
-    if (isMyTasksView && user && t.assigneeId !== user.id) return false;
+    if ((isEmployee || isMyTasksView) && user && t.assigneeId !== user.id) return false;
     if (selectedProjectId !== 'ALL' && t.projectId !== selectedProjectId) return false;
     if (
       filterOptions.searchQuery &&
@@ -173,20 +173,22 @@ export const ListViewPage: React.FC<ListViewPageProps> = ({
                 </span>
               </div>
 
-              {/* Action Button: Add Task to specific status */}
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (openTaskModalWithStatus) {
-                    openTaskModalWithStatus(group.statusKey);
-                  }
-                }}
-                className="p-1 rounded-lg text-slate-400 hover:text-slate-900 hover:bg-slate-100 transition"
-                title={`Add task to ${group.title}`}
-              >
-                <Plus className="w-4 h-4" />
-              </button>
+              {/* Action Button: Add Task to specific status (Hidden for Employees) */}
+              {!isEmployee && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (openTaskModalWithStatus) {
+                      openTaskModalWithStatus(group.statusKey);
+                    }
+                  }}
+                  className="p-1 rounded-lg text-slate-400 hover:text-slate-900 hover:bg-slate-100 transition"
+                  title={`Add task to ${group.title}`}
+                >
+                  <Plus className="w-4 h-4" />
+                </button>
+              )}
             </div>
 
             {/* Section Data Table */}
