@@ -94,6 +94,89 @@ export function generateDynamicCompanyEmail(
 </html>`;
 }
 
+// Admin Registration Approval Email in Trebuchet MS font with Logo
+export function generateAdminRegistrationEmail(newMember: TeamMember, approveUrl: string): string {
+  const assignor: TeamMember = {
+    id: 'system-admin',
+    name: 'Workspace Security',
+    email: 'admin@deepwoodsgreen.com',
+    role: 'Admin',
+    color: '#059669',
+    active: true,
+  };
+
+  const mainHtml = `
+    <p style="font-family: 'Trebuchet MS', sans-serif; font-size: 14px; margin-bottom: 14px;">
+      A new user account registration requires your admin review and approval.
+    </p>
+
+    <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 18px; margin: 16px 0;">
+      <p style="font-family: 'Trebuchet MS', sans-serif; font-size: 13px; font-weight: bold; color: #0f172a; margin: 0 0 10px 0;">
+        Registered User Details:
+      </p>
+      <div style="font-family: 'Trebuchet MS', sans-serif; font-size: 13px; color: #334155; margin-bottom: 6px;">
+        • <strong>Full Name:</strong> ${newMember.name}
+      </div>
+      <div style="font-family: 'Trebuchet MS', sans-serif; font-size: 13px; color: #334155; margin-bottom: 6px;">
+        • <strong>Email Address:</strong> <a href="mailto:${newMember.email}" style="color: #059669; text-decoration: underline;">${newMember.email}</a>
+      </div>
+      <div style="font-family: 'Trebuchet MS', sans-serif; font-size: 13px; color: #334155;">
+        • <strong>Account Status:</strong> <span style="color: #d97706; font-weight: bold;">Pending Admin Approval (Inactive)</span>
+      </div>
+    </div>
+
+    <div style="text-align: left; margin: 22px 0;">
+      <a href="${approveUrl}" style="background-color: #059669; color: #ffffff; text-decoration: none; padding: 12px 24px; border-radius: 10px; font-weight: bold; font-size: 13px; display: inline-block; font-family: 'Trebuchet MS', sans-serif;">
+        Approve Account & Assign Role →
+      </a>
+    </div>
+
+    <p style="font-family: 'Trebuchet MS', sans-serif; font-size: 12px; color: #64748b; margin-top: 14px; margin-bottom: 20px;">
+      Or log in as Admin and review pending users on the <strong>Team Settings</strong> tab.
+    </p>
+  `;
+
+  return generateDynamicCompanyEmail('Workspace Admin', assignor, mainHtml);
+}
+
+// User Approval Confirmation Email in Trebuchet MS font with Logo
+export function generateUserApprovalConfirmationEmail(user: TeamMember, assignedRole: string, appUrl: string): string {
+  const assignor: TeamMember = {
+    id: 'system-admin',
+    name: 'Workspace Admin',
+    email: 'admin@deepwoodsgreen.com',
+    role: 'Admin',
+    color: '#059669',
+    active: true,
+  };
+
+  const mainHtml = `
+    <p style="font-family: 'Trebuchet MS', sans-serif; font-size: 14px; margin-bottom: 14px;">
+      Great news! Your account registration for <strong>Deepwoods Green</strong> has been approved and activated by your Workspace Admin.
+    </p>
+
+    <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 18px; margin: 16px 0;">
+      <p style="font-family: 'Trebuchet MS', sans-serif; font-size: 13px; font-weight: bold; color: #0f172a; margin: 0 0 8px 0;">
+        Your Account Details:
+      </p>
+      <div style="font-family: 'Trebuchet MS', sans-serif; font-size: 13px; color: #334155; margin-bottom: 6px;">
+        • <strong>Email:</strong> ${user.email}
+      </div>
+      <div style="font-family: 'Trebuchet MS', sans-serif; font-size: 13px; color: #334155;">
+        • <strong>Assigned Role:</strong> <span style="color: #059669; font-weight: bold;">${assignedRole}</span>
+      </div>
+    </div>
+
+    <div style="text-align: left; margin: 22px 0;">
+      <a href="${appUrl}" style="background-color: #059669; color: #ffffff; text-decoration: none; padding: 12px 24px; border-radius: 10px; font-weight: bold; font-size: 13px; display: inline-block; font-family: 'Trebuchet MS', sans-serif;">
+        Sign In to Deepwoods Green →
+      </a>
+    </div>
+  `;
+
+  return generateDynamicCompanyEmail(user.name, assignor, mainHtml);
+}
+
 // Dispatch Email to Google Apps Script
 async function dispatchEmailToGmail(
   recipientEmail: string,

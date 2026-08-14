@@ -3,6 +3,7 @@ import { TeamMember, UserRole } from '../types';
 import { loadTeamFromStorage, saveTeamToStorage, sendAppsScriptAction, resetPasswordInBackend } from '../lib/sheets';
 import { hashPassword, verifyPassword } from '../lib/cryptoUtils';
 import { normalizeRole, canManageTeam, canManageProjects, canAccessTeamPage } from '../lib/permissions';
+import { generateAdminRegistrationEmail, generateUserApprovalConfirmationEmail } from '../lib/emailService';
 
 const PASSWORDS_STORAGE_KEY = 'deepwoods_user_passwords';
 const OTP_STORAGE_KEY = 'deepwoods_password_reset_otps';
@@ -34,31 +35,7 @@ const notifyAdminsOfNewRegistration = (newMember: TeamMember, team: TeamMember[]
   const approveUrl = `${appUrl}?approveEmail=${encodeURIComponent(newMember.email)}`;
 
   const subject = `🚨 Action Required: Approve Account for ${newMember.name} (${newMember.email})`;
-  const emailHtml = `
-    <div style="font-family: Arial, sans-serif; max-width: 560px; margin: 0 auto; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; padding: 28px; color: #1e293b;">
-      <div style="text-align: center; margin-bottom: 20px;">
-        <h2 style="color: #059669; margin: 0; font-size: 22px; font-weight: 800;">Deepwoods Green Workspace Alert</h2>
-        <p style="color: #64748b; font-size: 13px; margin-top: 4px;">New Account Registration Pending Approval</p>
-      </div>
-      
-      <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; margin: 20px 0;">
-        <p style="font-size: 13px; margin: 0 0 10px 0; color: #334155; font-weight: bold;">Registered User Details:</p>
-        <div style="font-size: 13px; margin-bottom: 6px;">• <strong>Name:</strong> ${newMember.name}</div>
-        <div style="font-size: 13px; margin-bottom: 6px;">• <strong>Email:</strong> ${newMember.email}</div>
-        <div style="font-size: 13px;">• <strong>Status:</strong> <span style="color: #d97706; font-weight: bold;">Pending Admin Approval (Inactive)</span></div>
-      </div>
-
-      <div style="text-align: center; margin: 24px 0;">
-        <a href="${approveUrl}" style="background-color: #059669; color: #ffffff; text-decoration: none; padding: 14px 28px; border-radius: 12px; font-weight: bold; font-size: 14px; display: inline-block; box-shadow: 0 4px 6px -1px rgba(5, 150, 105, 0.2);">
-          Approve Account & Assign Role →
-        </a>
-      </div>
-
-      <p style="font-size: 12px; color: #64748b; text-align: center; line-height: 1.5; margin-top: 16px;">
-        Or log in as Admin and review pending users on the <strong>Team Management</strong> tab.
-      </p>
-    </div>
-  `;
+  const emailHtml = generateAdminRegistrationEmail(newMember, approveUrl);
 
   recipients.forEach((recipientEmail) => {
     sendAppsScriptAction('sendEmail', {
@@ -463,23 +440,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Send user email confirmation that their account has been approved!
     const appUrl = typeof window !== 'undefined' ? window.location.origin : 'https://deepwoods-pm.vercel.app';
     const subject = `🎉 Account Approved! Welcome to Deepwoods Green`;
-    const userEmailHtml = `
-      <div style="font-family: Arial, sans-serif; max-width: 520px; margin: 0 auto; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; padding: 28px; color: #1e293b;">
-        <div style="text-align: center; margin-bottom: 20px;">
-          <h2 style="color: #059669; margin: 0; font-size: 22px; font-weight: 800;">Deepwoods Green</h2>
-          <p style="color: #64748b; font-size: 13px; margin-top: 4px;">Account Approved & Activated</p>
-        </div>
-        <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; text-align: center; margin: 20px 0;">
-          <p style="font-size: 14px; color: #0f172a; margin: 0 0 10px 0;">Hello <strong>${updatedMember.name}</strong>,</p>
-          <p style="font-size: 13px; color: #475569; margin: 0 0 16px 0;">
-            Great news! Your workspace account has been approved by your Workspace Admin. You have been assigned the role: <strong style="color: #059669;">${assignedRole}</strong>.
-          </p>
-          <a href="${appUrl}" style="background-color: #059669; color: #ffffff; text-decoration: none; padding: 12px 24px; border-radius: 10px; font-weight: bold; font-size: 13px; display: inline-block;">
-            Sign In to Deepwoods Green →
-          </a>
-        </div>
-      </div>
-    `;
+    const userEmailHtml = generateUserApprovalConfirmationEmail(updatedMember, assignedRole, appUrl);
 
     sendAppsScriptAction('sendEmail', {
       recipientEmail: normalized,
