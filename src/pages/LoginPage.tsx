@@ -17,7 +17,7 @@ import {
   Briefcase,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { UserRole } from '../types';
+import { TeamMember, UserRole } from '../types';
 
 interface LoginPageProps {
   onLoginSuccess: () => void;
@@ -54,6 +54,12 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
   // Global Messages
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  // Google OAuth State
+  const [isGsiLoaded, setIsGsiLoaded] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(false);
+  const buttonContainerRef = useRef<HTMLDivElement>(null);
+  const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
   // Mandatory Google OAuth Password Creation Modal State
   const [isGooglePasswordModalOpen, setIsGooglePasswordModalOpen] = useState(false);
