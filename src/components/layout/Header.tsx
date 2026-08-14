@@ -13,6 +13,7 @@ import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
 import { Priority, TaskStatus } from '../../types';
 import { PRIORITY_CONFIG, STATUS_CONFIG } from '../../lib/constants';
+import { isTaskAssignedToUser } from '../../lib/permissions';
 import { subDays, startOfMonth, endOfMonth } from 'date-fns';
 import { toYYYYMMDD } from '../../lib/dateUtils';
 
@@ -170,6 +171,13 @@ export const Header: React.FC<HeaderProps> = ({
     }
   };
 
+  const visibleProjects = projects.filter((p) => {
+    if (isEmployee && user) {
+      return tasks.some((t) => t.projectId === p.id && isTaskAssignedToUser(t, user));
+    }
+    return true;
+  });
+
   return (
     <header className="bg-white rounded-3xl p-2.5 sm:p-3 px-3 sm:px-5 border border-slate-200/80 shadow-xs flex flex-wrap sm:flex-nowrap items-center justify-between gap-2 sm:gap-4 sticky top-0 z-30 select-none">
       {/* Left: Page Title & Project Dropdown */}
@@ -189,8 +197,8 @@ export const Header: React.FC<HeaderProps> = ({
               onChange={(e) => setSelectedProjectId(e.target.value)}
               className="bg-transparent text-slate-900 font-bold focus:outline-none cursor-pointer pr-1 max-w-[120px] sm:max-w-[180px] truncate"
             >
-              <option value="ALL">All Projects ({projects.length})</option>
-              {projects.map((p) => (
+              <option value="ALL">All Projects ({visibleProjects.length})</option>
+              {visibleProjects.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.name}
                 </option>

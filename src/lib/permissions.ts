@@ -56,12 +56,25 @@ export function canDeleteProject(role?: string): boolean {
 }
 
 /**
- * Checks if a task is assigned to the given user by matching assigneeId or assigneeEmail.
+ * Checks if a task is assigned to the given user by matching assigneeId, assignee name, or assigneeEmail.
  */
-export function isTaskAssignedToUser(task: { assigneeId: string; assigneeEmail?: string }, user: { id: string; email?: string } | null): boolean {
+export function isTaskAssignedToUser(
+  task: { assigneeId: string; assigneeEmail?: string },
+  user: { id: string; name?: string; email?: string } | null
+): boolean {
   if (!user) return false;
-  if (task.assigneeId === user.id) return true;
-  if (task.assigneeEmail && user.email && task.assigneeEmail.trim().toLowerCase() === user.email.trim().toLowerCase()) return true;
+  const tAssignee = (task.assigneeId || '').trim().toLowerCase();
+  const tEmail = (task.assigneeEmail || '').trim().toLowerCase();
+  const uId = (user.id || '').trim().toLowerCase();
+  const uName = (user.name || '').trim().toLowerCase();
+  const uEmail = (user.email || '').trim().toLowerCase();
+
+  if (tAssignee) {
+    if (uId && tAssignee === uId) return true;
+    if (uName && tAssignee === uName) return true;
+    if (uEmail && tAssignee === uEmail) return true;
+  }
+  if (tEmail && uEmail && tEmail === uEmail) return true;
   return false;
 }
 
@@ -71,13 +84,21 @@ export function isTaskAssignedToUser(task: { assigneeId: string; assigneeEmail?:
 export function matchesAssigneeFilter(
   task: { assigneeId: string; assigneeEmail?: string },
   assigneeIdFilter: string,
-  teamMembers: { id: string; email: string }[]
+  teamMembers: { id: string; name?: string; email?: string }[]
 ): boolean {
   if (!assigneeIdFilter || assigneeIdFilter === 'ALL') return true;
-  if (task.assigneeId === assigneeIdFilter) return true;
-  const targetMember = teamMembers.find((m) => m.id === assigneeIdFilter);
-  if (targetMember && task.assigneeEmail && targetMember.email && task.assigneeEmail.trim().toLowerCase() === targetMember.email.trim().toLowerCase()) {
-    return true;
+
+  const targetMember = teamMembers.find(
+    (m) =>
+      m.id === assigneeIdFilter ||
+      (m.email && m.email.trim().toLowerCase() === assigneeIdFilter.trim().toLowerCase())
+  );
+
+  if (!targetMember) {
+    const tAssignee = (task.assigneeId || '').trim().toLowerCase();
+    const filterVal = assigneeIdFilter.trim().toLowerCase();
+    return tAssignee === filterVal;
   }
-  return false;
+
+  return isTaskAssignedToUser(task, targetMember);
 }
