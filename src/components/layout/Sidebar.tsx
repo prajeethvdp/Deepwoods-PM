@@ -62,7 +62,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         }`}
       >
         {/* Top Header & Brand */}
-        <div className="flex flex-col gap-5 min-h-0 overflow-y-auto pr-0.5 custom-scrollbar">
+        <div className="flex flex-col gap-5 min-h-0 overflow-y-auto no-scrollbar">
           {/* Brand Logo & Collapse Toggle */}
           {!isCollapsed ? (
             <div className="flex items-center justify-between gap-2 w-full">

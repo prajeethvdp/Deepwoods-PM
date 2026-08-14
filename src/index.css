@@ -33,23 +33,29 @@ body h1, body h2, body h3, body h4, body h5, body h6 {
   border-radius: 0px !important;
 }
 
-/* Custom Scrollbars */
+/* Universal Invisible Scrollbars (Hide scrollbar track/thumb visually across all browsers) */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 0px !important;
+  height: 0px !important;
+  display: none !important;
+  background: transparent !important;
 }
 
 ::-webkit-scrollbar-track {
-  background: transparent;
+  background: transparent !important;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(148, 163, 184, 0.3);
-  border-radius: 9999px;
+  background: transparent !important;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(148, 163, 184, 0.6);
+  background: transparent !important;
+}
+
+* {
+  -ms-overflow-style: none !important;  /* IE and Edge */
+  scrollbar-width: none !important;  /* Firefox */
 }
 
 /* Animations */
