@@ -29,6 +29,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
     completeLogin,
     loginWithPassword,
     signUpWithPassword,
+    setPasswordForUser,
     sendPasswordResetOTP,
     verifyOTPAndResetPassword,
   } = useAuth();
@@ -54,11 +55,14 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  // Google OAuth State
-  const [isGsiLoaded, setIsGsiLoaded] = useState(false);
-  const [isVerifying, setIsVerifying] = useState(false);
-  const buttonContainerRef = useRef<HTMLDivElement>(null);
-  const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+  // Mandatory Google OAuth Password Creation Modal State
+  const [isGooglePasswordModalOpen, setIsGooglePasswordModalOpen] = useState(false);
+  const [googleUser, setGoogleUser] = useState<TeamMember | null>(null);
+  const [googleNewPassword, setGoogleNewPassword] = useState('');
+  const [googleConfirmPassword, setGoogleConfirmPassword] = useState('');
+  const [showGooglePassword, setShowGooglePassword] = useState(false);
+  const [googleModalSubmitting, setGoogleModalSubmitting] = useState(false);
+  const [googleModalError, setGoogleModalError] = useState<string | null>(null);
 
   // 2-Step Reset Password Modal State
   const [isResetModalOpen, setIsResetModalOpen] = useState(false);
@@ -96,8 +100,18 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
         if (payload && payload.email) {
           const res = await verifyGoogleUser(payload.email, payload.name || payload.email.split('@')[0]);
           if (res.success && res.user) {
-            completeLogin(res.user);
-            onLoginSuccess();
+            // Check if user account does not have a password created yet
+            if (!res.user.password || res.user.password.trim() === '') {
+              setGoogleUser(res.user);
+              setGoogleNewPassword('');
+              setGoogleConfirmPassword('');
+              setGoogleModalError(null);
+              setIsGooglePasswordModalOpen(true);
+            } else {
+              // Password already set previously -> skip modal and complete login directly
+              completeLogin(res.user);
+              onLoginSuccess();
+            }
           } else {
             setErrorMessage(res.error || 'Access Denied.');
           }
@@ -216,6 +230,37 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
       setErrorMessage('An unexpected error occurred during account creation.');
     } finally {
       setIsSignUpSubmitting(false);
+    }
+  };
+
+  // Save Password from Post-Google OAuth Password Creation Modal
+  const handleSaveGooglePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setGoogleModalError(null);
+
+    if (!googleNewPassword || googleNewPassword.length < 4) {
+      setGoogleModalError('Password must be at least 4 characters long.');
+      return;
+    }
+
+    if (googleNewPassword !== googleConfirmPassword) {
+      setGoogleModalError('Passwords do not match. Please check and try again.');
+      return;
+    }
+
+    if (!googleUser) return;
+
+    setGoogleModalSubmitting(true);
+    try {
+      const res = await setPasswordForUser(googleUser.email, googleNewPassword);
+      const userToLogin = res.updatedUser || { ...googleUser, password: googleNewPassword };
+      setIsGooglePasswordModalOpen(false);
+      completeLogin(userToLogin);
+      onLoginSuccess();
+    } catch (err) {
+      setGoogleModalError('Error saving password. Please try again.');
+    } finally {
+      setGoogleModalSubmitting(false);
     }
   };
 
@@ -818,6 +863,88 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
                 </div>
               </form>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* MANDATORY GOOGLE OAUTH PASSWORD CREATION MODAL */}
+      {isGooglePasswordModalOpen && googleUser && (
+        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl border border-slate-100 space-y-4 animate-in zoom-in duration-150">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 bg-emerald-50 border border-emerald-200 rounded-2xl text-emerald-600">
+                <KeyRound className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="font-bold text-slate-900 text-base font-serif">Create Account Password</h3>
+                <p className="text-xs text-slate-400 font-medium">Set a password for your account. You won't be asked again.</p>
+              </div>
+            </div>
+
+            <p className="text-xs text-slate-600">
+              Welcome, <strong className="text-emerald-700">{googleUser.name}</strong>! Your account has been created via Google. Please create a password to finish your account setup.
+            </p>
+
+            {googleModalError && (
+              <div className="bg-red-50 text-red-700 text-xs p-3 rounded-xl border border-red-200">
+                {googleModalError}
+              </div>
+            )}
+
+            <form onSubmit={handleSaveGooglePassword} className="space-y-4 text-xs">
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Create Password</label>
+                <div className="relative flex items-center">
+                  <input
+                    type={showGooglePassword ? 'text' : 'password'}
+                    value={googleNewPassword}
+                    onChange={(e) => setGoogleNewPassword(e.target.value)}
+                    placeholder="Min 4 characters"
+                    required
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-900 focus:bg-white focus:outline-none focus:border-emerald-600 transition"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowGooglePassword(!showGooglePassword)}
+                    className="absolute right-3 text-slate-400 hover:text-slate-600"
+                  >
+                    {showGooglePassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Confirm Password</label>
+                <input
+                  type={showGooglePassword ? 'text' : 'password'}
+                  value={googleConfirmPassword}
+                  onChange={(e) => setGoogleConfirmPassword(e.target.value)}
+                  placeholder="Re-enter password"
+                  required
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-900 focus:bg-white focus:outline-none focus:border-emerald-600 transition"
+                />
+              </div>
+
+              <div className="flex justify-end pt-2 border-t border-slate-100">
+                <button
+                  type="submit"
+                  disabled={googleModalSubmitting}
+                  className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl shadow-xs flex items-center gap-2 transition disabled:opacity-50"
+                >
+                  {googleModalSubmitting ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Saving Password...</span>
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 className="w-4 h-4" />
+                      <span>Set Password & Complete Setup</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
