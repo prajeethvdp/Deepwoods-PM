@@ -198,105 +198,45 @@ export const DashboardPage: React.FC = () => {
 
   return (
     <div className="w-full min-h-full bg-[#EEF2F6] p-4 md:p-5 space-y-5 text-slate-800 font-sans select-none">
-      {/* Employee Personal Command Center Hero Header */}
+      {/* Employee Personal Greeting Header */}
       {isEmployee && (
-        <div className="relative overflow-hidden bg-gradient-to-r from-slate-900 via-teal-950 to-emerald-950 p-6 md:p-7 rounded-3xl text-white shadow-xl border border-emerald-500/20 backdrop-blur-md transition-all duration-300">
-          {/* Background Decorative Ambient Glows */}
-          <div className="absolute -right-16 -top-16 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none animate-pulse" />
-          <div className="absolute right-32 -bottom-20 w-80 h-80 bg-teal-500/10 rounded-full blur-3xl pointer-events-none" />
-
-          <div className="relative z-10 flex flex-wrap items-center justify-between gap-6">
-            {/* Left: User Avatar & Hero Greeting */}
-            <div className="flex items-center gap-4">
-              <div className="relative">
-                <div
-                  className="w-14 h-14 rounded-2xl flex items-center justify-center text-white text-xl font-extrabold shadow-lg ring-4 ring-white/10 transition-transform duration-300 hover:scale-105"
-                  style={{ backgroundColor: user?.color || '#059669' }}
-                >
-                  {user?.name ? user.name.charAt(0).toUpperCase() : 'E'}
-                </div>
-                <span className="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-400 border-2 border-slate-900 rounded-full animate-ping" />
-                <span className="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-400 border-2 border-slate-900 rounded-full" />
-              </div>
-
-              <div className="space-y-1">
-                <div className="flex items-center gap-2">
-                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-widest bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                    EMPLOYEE WORKSTATION
-                  </span>
-                  <span className="text-xs text-slate-400 font-medium hidden sm:inline-block">
-                    {format(today, 'EEEE, d MMMM yyyy')}
-                  </span>
-                </div>
-                <h1 className="text-2xl md:text-3xl font-extrabold text-white font-serif tracking-tight">
-                  Welcome back, {user?.name || 'Team Member'} 👋
-                </h1>
-                <p className="text-xs text-slate-300 font-medium">
-                  Your personal command center for tracking assigned tasks, workflow progress, and deadlines.
-                </p>
-              </div>
-            </div>
-
-            {/* Right: Interactive Quick Metric Badges */}
-            <div className="flex items-center gap-3 flex-wrap">
-              <div className="bg-white/10 backdrop-blur-md px-4 py-2.5 rounded-2xl border border-white/10 flex items-center gap-3 transition-transform duration-300 hover:scale-102">
-                <div className="w-8 h-8 rounded-xl bg-amber-500/20 text-amber-300 flex items-center justify-center font-bold">
-                  <Clock className="w-4 h-4" />
-                </div>
-                <div>
-                  <div className="text-[11px] text-slate-300 font-medium">Active In Progress</div>
-                  <div className="text-base font-extrabold text-white leading-tight">{inProgressTasks.length} Tasks</div>
-                </div>
-              </div>
-
-              <div className="bg-white/10 backdrop-blur-md px-4 py-2.5 rounded-2xl border border-white/10 flex items-center gap-3 transition-transform duration-300 hover:scale-102">
-                <div className="w-8 h-8 rounded-xl bg-rose-500/20 text-rose-300 flex items-center justify-center font-bold">
-                  <AlertCircle className="w-4 h-4" />
-                </div>
-                <div>
-                  <div className="text-[11px] text-slate-300 font-medium">Action Required</div>
-                  <div className="text-base font-extrabold text-rose-300 leading-tight">{overdueTasks.length} Overdue</div>
-                </div>
-              </div>
-            </div>
-          </div>
+        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-2xs">
+          <h1 className="text-xl font-bold text-slate-900 font-serif">Welcome back, {user?.name || 'Team Member'} 👋</h1>
         </div>
       )}
 
-      {/* Row 1: Animated KPI Stat Cards */}
+      {/* Row 1: Stat Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
         {/* 1. TOTAL / MY ASSIGNED TASKS */}
-        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-2xs hover:shadow-md hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between h-32 group">
+        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-2xs flex flex-col justify-between h-32">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider">{card1Title}</span>
-            <div className="w-8 h-8 rounded-xl border border-emerald-200 text-emerald-600 flex items-center justify-center bg-emerald-50 shadow-2xs group-hover:scale-110 transition-transform">
+            <div className="w-7 h-7 rounded-lg border border-slate-200 text-slate-700 flex items-center justify-center bg-slate-50 shadow-2xs">
               <ClipboardList className="w-4 h-4" />
             </div>
           </div>
           <div className="flex items-end justify-between">
             <div className="text-3xl font-extrabold text-slate-900 leading-none">{totalTasksCount}</div>
             <div className="text-right">
-              <span className="text-[10px] text-slate-400 font-semibold block truncate max-w-[130px]" title={card1Sub}>{card1Sub}</span>
+              <span className="text-[10px] text-slate-400 font-medium block truncate max-w-[120px]" title={card1Sub}>{card1Sub}</span>
             </div>
           </div>
         </div>
 
         {/* 2. OVERDUE TASKS / MY OVERDUE */}
-        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-2xs hover:shadow-md hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between h-32 group">
+        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-2xs flex flex-col justify-between h-32">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider">{card2Title}</span>
-            <div className={`w-8 h-8 rounded-xl border flex items-center justify-center shadow-2xs group-hover:scale-110 transition-transform ${
-              overdueTasks.length > 0 ? 'border-rose-200 text-rose-600 bg-rose-50' : 'border-slate-200 text-slate-600 bg-slate-50'
-            }`}>
+            <div className="w-7 h-7 rounded-lg border border-slate-200 text-slate-700 flex items-center justify-center bg-slate-50 shadow-2xs">
               <AlertCircle className="w-4 h-4" />
             </div>
           </div>
           <div className="flex items-end justify-between">
-            <div className={`text-3xl font-extrabold leading-none ${overdueTasks.length > 0 ? 'text-rose-600 animate-pulse' : 'text-slate-900'}`}>
+            <div className={`text-3xl font-extrabold leading-none ${overdueTasks.length > 0 ? 'text-rose-600' : 'text-slate-900'}`}>
               {overdueTasks.length}
             </div>
             <div className="text-right">
-              <span className="text-[10px] text-slate-400 font-semibold block truncate max-w-[130px]" title={card2Sub}>
+              <span className="text-[10px] text-slate-400 font-medium block truncate max-w-[120px]" title={card2Sub}>
                 {card2Sub}
               </span>
             </div>
@@ -304,35 +244,35 @@ export const DashboardPage: React.FC = () => {
         </div>
 
         {/* 3. IN PROGRESS / MY IN PROGRESS */}
-        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-2xs hover:shadow-md hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between h-32 group">
+        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-2xs flex flex-col justify-between h-32">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider">{card3Title}</span>
-            <div className="w-8 h-8 rounded-xl border border-amber-200 text-amber-600 flex items-center justify-center bg-amber-50 shadow-2xs group-hover:scale-110 transition-transform">
+            <div className="w-7 h-7 rounded-lg border border-slate-200 text-slate-700 flex items-center justify-center bg-slate-50 shadow-2xs">
               <Clock className="w-4 h-4" />
             </div>
           </div>
           <div className="flex items-end justify-between">
             <div className="text-3xl font-extrabold text-slate-900 leading-none">{inProgressTasks.length}</div>
             <div className="text-right">
-              <span className="text-[10px] text-slate-400 font-semibold block truncate max-w-[130px]" title={card3Sub}>{card3Sub}</span>
+              <span className="text-[10px] text-slate-400 font-medium block truncate max-w-[120px]" title={card3Sub}>{card3Sub}</span>
             </div>
           </div>
         </div>
 
         {/* 4. DONE / MY COMPLETED */}
-        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-2xs hover:shadow-md hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between h-32 group">
+        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-2xs flex flex-col justify-between h-32">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider truncate" title={card4Title}>
               {card4Title}
             </span>
-            <div className="w-8 h-8 rounded-xl border border-sky-200 text-sky-600 flex items-center justify-center bg-sky-50 shadow-2xs group-hover:scale-110 transition-transform shrink-0">
+            <div className="w-7 h-7 rounded-lg border border-slate-200 text-slate-700 flex items-center justify-center bg-slate-50 shadow-2xs shrink-0">
               <Check className="w-4 h-4" />
             </div>
           </div>
           <div className="flex items-end justify-between">
             <div className="text-3xl font-extrabold text-slate-900 leading-none">{completedInDateRangeRelevant.length}</div>
             <div className="text-right min-w-0 pl-2">
-              <span className="text-[10px] text-slate-400 font-semibold block truncate" title={card4Sub}>
+              <span className="text-[10px] text-slate-400 font-medium block truncate" title={card4Sub}>
                 {card4Sub}
               </span>
             </div>
@@ -433,64 +373,7 @@ export const DashboardPage: React.FC = () => {
             )}
           </div>
 
-          {/* 2. Personal Workflow Status Pipeline for Employees */}
-          {isEmployee && (
-            <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-2xs space-y-4">
-              <div className="flex items-center justify-between">
-                <h2 className="text-base font-bold text-slate-900 font-serif flex items-center gap-2">
-                  <TrendingUp className="w-4 h-4 text-emerald-600" />
-                  <span>My Workflow Pipeline</span>
-                </h2>
-                <span className="text-xs font-semibold text-slate-400">
-                  {totalTasksCount} Total Assigned {totalTasksCount === 1 ? 'Task' : 'Tasks'}
-                </span>
-              </div>
-
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                {(Object.keys(statusCounts) as TaskStatus[]).map((status) => {
-                  const count = statusCounts[status];
-                  const pct = totalTasksCount > 0 ? Math.round((count / totalTasksCount) * 100) : 0;
-                  const statusGradients: Record<TaskStatus, string> = {
-                    'To Do': 'from-sky-50 to-blue-50/50 border-sky-200 text-sky-800',
-                    'In Progress': 'from-purple-50 to-indigo-50/50 border-purple-200 text-purple-800',
-                    'In Review': 'from-amber-50 to-orange-50/50 border-amber-200 text-amber-800',
-                    'Done': 'from-emerald-50 to-teal-50/50 border-emerald-200 text-emerald-800',
-                  };
-                  const barColors: Record<TaskStatus, string> = {
-                    'To Do': '#38BDF8',
-                    'In Progress': '#8B5CF6',
-                    'In Review': '#F59E0B',
-                    'Done': '#84CC16',
-                  };
-
-                  return (
-                    <div
-                      key={status}
-                      className={`p-3.5 rounded-xl border bg-gradient-to-br ${statusGradients[status]} space-y-2 transition-transform duration-200 hover:scale-102 shadow-2xs`}
-                    >
-                      <div className="flex items-center justify-between text-xs font-extrabold">
-                        <span>{status}</span>
-                        <span className="text-sm font-black">{count}</span>
-                      </div>
-
-                      <div className="w-full h-1.5 bg-white/70 rounded-full overflow-hidden">
-                        <div
-                          className="h-full rounded-full transition-all duration-500"
-                          style={{ width: `${pct}%`, backgroundColor: barColors[status] }}
-                        />
-                      </div>
-
-                      <div className="text-[10px] font-bold text-slate-500 text-right">
-                        {pct}% of workload
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* 3. Tasks Overview Data Table */}
+          {/* 2. Tasks Overview Data Table */}
           <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-2xs space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="text-base font-bold text-slate-900 font-serif">
