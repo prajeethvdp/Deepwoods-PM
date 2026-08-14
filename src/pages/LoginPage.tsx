@@ -36,6 +36,11 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
 
   // Tab State: 'signin' or 'signup'
   const [activeTab, setActiveTab] = useState<'signin' | 'signup'>('signin');
+  const activeTabRef = useRef(activeTab);
+
+  useEffect(() => {
+    activeTabRef.current = activeTab;
+  }, [activeTab]);
 
   // Sign In State
   const [email, setEmail] = useState('');
@@ -113,7 +118,11 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
         const payload = JSON.parse(jsonPayload);
 
         if (payload && payload.email) {
-          const res = await verifyGoogleUser(payload.email, payload.name || payload.email.split('@')[0]);
+          const res = await verifyGoogleUser(
+            payload.email,
+            payload.name || payload.email.split('@')[0],
+            activeTabRef.current === 'signup'
+          );
           if (res.success && res.user) {
             // Check if user account does not have a password created yet
             if (!res.user.password || res.user.password.trim() === '') {

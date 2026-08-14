@@ -101,9 +101,9 @@ interface AuthContextType {
   canManageTeam: boolean;
   canManageProjects: boolean;
   canAccessTeamPage: boolean;
-  verifyGoogleUser: (email: string, name: string) => Promise<{ success: boolean; user?: TeamMember; error?: string }>;
+  verifyGoogleUser: (email: string, name: string, isSignUp?: boolean) => Promise<{ success: boolean; user?: TeamMember; error?: string }>;
   completeLogin: (user: TeamMember) => void;
-  loginWithGoogle: (email: string, name: string) => Promise<{ success: boolean; user?: TeamMember; error?: string }>;
+  loginWithGoogle: (email: string, name: string, isSignUp?: boolean) => Promise<{ success: boolean; user?: TeamMember; error?: string }>;
   loginWithPassword: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
   signUpWithPassword: (name: string, email: string, password: string) => Promise<{ success: boolean; user?: TeamMember; error?: string; pendingApproval?: boolean }>;
   approveUserByAdmin: (userEmail: string, assignedRole: UserRole) => Promise<{ success: boolean; error?: string }>;
@@ -226,7 +226,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const verifyGoogleUser = async (
     email: string,
-    name: string
+    name: string,
+    isSignUp: boolean = false
   ): Promise<{ success: boolean; user?: TeamMember; error?: string }> => {
     const normalized = email.trim().toLowerCase();
     const { team } = await fetchLatestTeam();
@@ -242,7 +243,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return { success: true, user: found };
     }
 
-    // Auto-create user account for Google Sign-In with active = false (Pending Admin Approval)
+    // Unregistered Google user on "Sign In" tab -> Return error requiring account registration
+    if (!isSignUp) {
+      return {
+        success: false,
+        error: `No account found for ${email}. Please click the "Create Account" tab above to register your account first.`,
+      };
+    }
+
+    // Creating account from "Create Account" tab via Google (active = false, Pending Approval)
     const newMember: TeamMember = {
       id: `tm-${Date.now()}`,
       name: name || normalized.split('@')[0],
@@ -270,9 +279,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const loginWithGoogle = async (
     email: string,
-    name: string
+    name: string,
+    isSignUp: boolean = false
   ): Promise<{ success: boolean; user?: TeamMember; error?: string }> => {
-    const res = await verifyGoogleUser(email, name);
+    const res = await verifyGoogleUser(email, name, isSignUp);
     if (res.success && res.user) {
       completeLogin(res.user);
     }
