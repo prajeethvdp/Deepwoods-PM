@@ -67,6 +67,9 @@ export const DashboardPage: React.FC = () => {
   // 2. Filter Projects for Project Overview Cards
   const displayProjects = projects.filter((p) => {
     if (selectedProjectId !== 'ALL' && p.id !== selectedProjectId) return false;
+    if (isEmployee && user) {
+      return tasks.some((t) => t.projectId === p.id && isTaskAssignedToUser(t, user));
+    }
     return true;
   });
 
@@ -294,7 +297,9 @@ export const DashboardPage: React.FC = () => {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
                 {displayProjects.map((project, idx) => {
-                  const projectTasks = activeTasks.filter((t) => t.projectId === project.id);
+                  const projectTasks = isEmployee && user
+                    ? activeTasks.filter((t) => t.projectId === project.id && isTaskAssignedToUser(t, user))
+                    : activeTasks.filter((t) => t.projectId === project.id);
                   const completedCount = projectTasks.filter((t) => t.status === 'Done').length;
                   const progressPct = projectTasks.length > 0 ? Math.round((completedCount / projectTasks.length) * 100) : 0;
 

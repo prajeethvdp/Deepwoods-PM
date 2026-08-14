@@ -423,40 +423,21 @@ export const Header: React.FC<HeaderProps> = ({
           <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin text-emerald-600' : ''}`} />
         </button>
 
-        {/* User Badge Avatar & Role */}
+        {/* User Profile Avatar & Name */}
         {user && (
           <div className="flex items-center gap-2 pl-2 border-l border-slate-200">
             <div className="flex items-center gap-2">
               <div
                 className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold shadow-xs ring-2 ring-white"
                 style={{ backgroundColor: user.color }}
-                title={`${user.name} (${userRole})`}
+                title={user.name}
               >
                 {user.name.charAt(0)}
               </div>
               <div className="hidden xl:flex flex-col text-left leading-tight">
                 <span className="text-xs font-bold text-slate-800">{user.name}</span>
-                <span
-                  className={`text-[9px] font-extrabold tracking-wider uppercase px-1.5 py-0.2 rounded-md border w-fit ${
-                    userRole === 'Admin'
-                      ? 'bg-purple-50 text-purple-700 border-purple-200'
-                      : userRole === 'Product Manager'
-                      ? 'bg-blue-50 text-blue-700 border-blue-200'
-                      : 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                  }`}
-                >
-                  {userRole}
-                </span>
               </div>
             </div>
-
-            <button
-              onClick={logout}
-              className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-full transition"
-              title="Sign Out"
-            >
-              <LogOut className="w-4 h-4" />
-            </button>
           </div>
         )}
       </div>

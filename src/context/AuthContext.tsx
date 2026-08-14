@@ -267,16 +267,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           error: `Your account for ${email} is pending Admin approval. Please contact your Workspace Admin to approve access.`,
         };
       }
+
+      if (!found.password || found.password.trim() === '') {
+        return {
+          success: false,
+          error: `No password set for ${email}. You can only sign in via Google if you have created an account and set up a password first.`,
+        };
+      }
+
       return { success: true, user: found };
     }
 
-    // Unregistered Google user on "Sign In" tab -> Return error requiring account registration
-    if (!isSignUp) {
-      return {
-        success: false,
-        error: `No account found for ${email}. Please click the "Create Account" tab above to register your account first.`,
-      };
-    }
+    return {
+      success: false,
+      error: `No account found for ${email}. You can only sign in via Google if you have created an account before and set a password. Please create an account first.`,
+    };
 
     // Creating account from "Create Account" tab via Google (active = false, Pending Approval)
     const newMember: TeamMember = {

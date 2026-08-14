@@ -473,40 +473,44 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
             </button>
           </div>
 
-          {/* Prominent Google OAuth Section */}
-          <div className="space-y-3 flex flex-col items-center">
-            <div className="flex flex-col items-center justify-center min-h-[46px] w-full">
-              {isVerifying ? (
-                <div className="flex items-center gap-2 text-emerald-700 text-xs font-bold py-2 animate-pulse">
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>Verifying OAuth Credentials...</span>
-                </div>
-              ) : (
-                <>
-                  <div ref={buttonContainerRef} id="google-signin-button" className="flex justify-center w-full" />
-                  {!isGsiLoaded && googleClientId && (
-                    <div className="text-xs text-slate-400 animate-pulse mt-1">
-                      Loading Google OAuth...
+          {/* Prominent Google OAuth Section (Only for Sign In tab) */}
+          {activeTab === 'signin' && (
+            <>
+              <div className="space-y-3 flex flex-col items-center">
+                <div className="flex flex-col items-center justify-center min-h-[46px] w-full">
+                  {isVerifying ? (
+                    <div className="flex items-center gap-2 text-emerald-700 text-xs font-bold py-2 animate-pulse">
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Verifying OAuth Credentials...</span>
                     </div>
+                  ) : (
+                    <>
+                      <div ref={buttonContainerRef} id="google-signin-button" className="flex justify-center w-full" />
+                      {!isGsiLoaded && googleClientId && (
+                        <div className="text-xs text-slate-400 animate-pulse mt-1">
+                          Loading Google OAuth...
+                        </div>
+                      )}
+                    </>
                   )}
-                </>
-              )}
-            </div>
+                </div>
 
-            {!googleClientId && (
-              <div className="w-full bg-amber-50 border border-amber-200 p-3 rounded-2xl text-[11px] text-amber-700 text-center">
-                Configure <code className="font-mono font-bold">VITE_GOOGLE_CLIENT_ID</code> in .env to enable Google OAuth.
+                {!googleClientId && (
+                  <div className="w-full bg-amber-50 border border-amber-200 p-3 rounded-2xl text-[11px] text-amber-700 text-center">
+                    Configure <code className="font-mono font-bold">VITE_GOOGLE_CLIENT_ID</code> in .env to enable Google OAuth.
+                  </div>
+                )}
               </div>
-            )}
-          </div>
 
-          {/* Minimalist Divider */}
-          <div className="relative flex items-center justify-center">
-            <div className="border-t border-slate-200 w-full" />
-            <span className="bg-white px-3 text-[11px] text-slate-400 font-medium absolute uppercase tracking-wider">
-              or continue with email
-            </span>
-          </div>
+              {/* Minimalist Divider */}
+              <div className="relative flex items-center justify-center">
+                <div className="border-t border-slate-200 w-full" />
+                <span className="bg-white px-3 text-[11px] text-slate-400 font-medium absolute uppercase tracking-wider">
+                  or continue with email
+                </span>
+              </div>
+            </>
+          )}
 
           {/* TAB 1: SIGN IN FORM */}
           {activeTab === 'signin' && (

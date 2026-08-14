@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
+import { isTaskAssignedToUser } from '../../lib/permissions';
 
 interface SidebarProps {
   currentTab: string;
@@ -52,6 +53,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
     if (!canAccessTeamPage) return [];
     return [{ id: 'team', label: 'Team Settings', icon: Users }];
   }, [canAccessTeamPage]);
+
+  // Filter projects for Employee role (only projects containing tasks assigned to this employee)
+  const visibleProjects = useMemo(() => {
+    if (isEmployee && user) {
+      return projects.filter((p) =>
+        tasks.some((t) => t.projectId === p.id && isTaskAssignedToUser(t, user))
+      );
+    }
+    return projects;
+  }, [projects, tasks, isEmployee, user]);
 
   return (
     <>
@@ -152,7 +163,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             {!isCollapsed ? (
               <div className="flex items-center justify-between px-2.5 py-1">
                 <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400">
-                  Projects ({projects.length})
+                  Projects ({visibleProjects.length})
                 </span>
                 <div className="flex items-center gap-1">
                   {canManageProjects && (
@@ -180,14 +191,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
             {(projectsOpen || isCollapsed) && (
               <div className="space-y-0.5">
-                {projects.length === 0 ? (
+                {visibleProjects.length === 0 ? (
                   !isCollapsed && (
                     <span className="text-[11px] text-slate-400 italic px-3 py-1 block">
                       No active projects
                     </span>
                   )
                 ) : (
-                  projects.map((proj) => (
+                  visibleProjects.map((proj) => (
                     <div
                       key={proj.id}
                       onClick={() => navigateToProject(proj.id)}
