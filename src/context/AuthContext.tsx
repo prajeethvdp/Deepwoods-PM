@@ -22,6 +22,64 @@ const setStoredPassword = (email: string, hashedPassword: string) => {
   localStorage.setItem(PASSWORDS_STORAGE_KEY, JSON.stringify(map));
 };
 
+const notifyAdminsOfNewRegistration = (newMember: TeamMember, team: TeamMember[]) => {
+  const adminEmails = team
+    .filter((m) => normalizeRole(m.role) === 'Admin' && m.email)
+    .map((m) => m.email.trim().toLowerCase());
+
+  const recipients = Array.from(
+    new Set(adminEmails.length > 0 ? adminEmails : ['prajeethv100@gmail.com', 'prajeeth.deepwoods@gmail.com'])
+  );
+
+  const subject = `🔔 New User Registration Alert: ${newMember.name} (${newMember.email})`;
+  const emailHtml = `
+    <div style="font-family: Arial, sans-serif; max-width: 540px; margin: 0 auto; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; padding: 24px; color: #1e293b;">
+      <div style="text-align: center; margin-bottom: 16px;">
+        <h2 style="color: #059669; margin: 0; font-size: 20px; font-weight: 800;">Deepwoods Green Workspace Alert</h2>
+        <p style="color: #64748b; font-size: 12px; margin-top: 4px;">New User Account Created</p>
+      </div>
+      <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 18px; margin: 16px 0;">
+        <p style="font-size: 13px; margin: 0 0 10px 0; color: #334155;">A new user has registered for the workspace platform:</p>
+        <div style="font-size: 13px; font-weight: bold; color: #0f172a; margin-bottom: 6px;">• Name: <span style="color: #059669;">${newMember.name}</span></div>
+        <div style="font-size: 13px; font-weight: bold; color: #0f172a; margin-bottom: 6px;">• Email: <span style="color: #2563eb;">${newMember.email}</span></div>
+        <div style="font-size: 13px; font-weight: bold; color: #0f172a;">• Assigned Role: <span style="color: #d97706;">Employee (Default)</span></div>
+      </div>
+      <p style="font-size: 12px; color: #475569; line-height: 1.5;">
+        As an Admin, you can review this user and update their role (e.g., to Product Manager or Admin) anytime from the <strong>Team Management</strong> tab.
+      </p>
+    </div>
+  `;
+
+  recipients.forEach((recipientEmail) => {
+    sendAppsScriptAction('sendEmail', {
+      recipientEmail,
+      subject,
+      htmlBody: emailHtml,
+    }).catch((err) => console.warn('Background admin alert email dispatch:', err));
+  });
+
+  try {
+    const rawNotifs = localStorage.getItem('deepwoods_email_notifications');
+    const notifs = rawNotifs ? JSON.parse(rawNotifs) : [];
+    const newNotif = {
+      id: `notif-reg-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+      taskId: 'admin-alert',
+      recipientEmail: recipients[0],
+      recipientName: 'Workspace Admin',
+      assignorName: newMember.name,
+      assignorEmail: newMember.email,
+      taskTitle: `New Account: ${newMember.name} (${newMember.email})`,
+      projectName: 'Security Alert',
+      subject,
+      sentAt: new Date().toISOString(),
+      status: 'Sent',
+    };
+    localStorage.setItem('deepwoods_email_notifications', JSON.stringify([newNotif, ...notifs]));
+  } catch (err) {
+    console.warn('Failed to save in-app admin registration notification:', err);
+  }
+};
+
 interface AuthContextType {
   user: TeamMember | null;
   isAuthenticated: boolean;
@@ -36,7 +94,7 @@ interface AuthContextType {
   completeLogin: (user: TeamMember) => void;
   loginWithGoogle: (email: string, name: string) => Promise<{ success: boolean; user?: TeamMember; error?: string }>;
   loginWithPassword: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
-  signUpWithPassword: (name: string, email: string, password: string, role?: UserRole) => Promise<{ success: boolean; user?: TeamMember; error?: string }>;
+  signUpWithPassword: (name: string, email: string, password: string) => Promise<{ success: boolean; user?: TeamMember; error?: string }>;
   setPasswordForUser: (email: string, newPassword: string) => Promise<{ success: boolean; updatedUser?: TeamMember; error?: string }>;
   sendPasswordResetOTP: (email: string) => Promise<{ success: boolean; error?: string; message?: string }>;
   verifyOTPAndResetPassword: (email: string, otpCode: string, newPassword: string) => Promise<{ success: boolean; error?: string; message?: string }>;
@@ -172,7 +230,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return { success: true, user: found };
     }
 
-    // Auto-create user account for Google Sign-In if not existing
+    // Auto-create user account for Google Sign-In with default Employee role
     const newMember: TeamMember = {
       id: `tm-${Date.now()}`,
       name: name || normalized.split('@')[0],
@@ -187,6 +245,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     sendAppsScriptAction('addTeamMember', { data: newMember }).catch((err) =>
       console.warn('Background sheet addTeamMember sync:', err)
     );
+
+    // Notify Admins of new account creation
+    notifyAdminsOfNewRegistration(newMember, team);
 
     return { success: true, user: newMember };
   };
@@ -260,8 +321,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signUpWithPassword = async (
     name: string,
     email: string,
-    password: string,
-    role: UserRole = 'Employee'
+    password: string
   ): Promise<{ success: boolean; user?: TeamMember; error?: string }> => {
     const normalized = email.trim().toLowerCase();
     if (!name.trim()) {
@@ -286,11 +346,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const hashedPassword = await hashPassword(password);
     setStoredPassword(normalized, hashedPassword);
 
+    // Enforce default Employee role for all new self-registrations
     const newMember: TeamMember = {
       id: `tm-${Date.now()}`,
       name: name.trim(),
       email: normalized,
-      role: role || 'Employee',
+      role: 'Employee',
       color: '#10B981',
       active: true,
       password: hashedPassword,
@@ -304,6 +365,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     resetPasswordInBackend(normalized, hashedPassword).catch((err) =>
       console.warn('Background sheet password sync:', err)
     );
+
+    // Send Admin Notification email & in-app alert
+    notifyAdminsOfNewRegistration(newMember, team);
 
     completeLogin(newMember);
     return { success: true, user: newMember };

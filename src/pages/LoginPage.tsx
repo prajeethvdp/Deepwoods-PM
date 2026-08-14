@@ -47,7 +47,6 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
   const [signUpEmail, setSignUpEmail] = useState('');
   const [signUpPassword, setSignUpPassword] = useState('');
   const [signUpConfirmPassword, setSignUpConfirmPassword] = useState('');
-  const [signUpRole, setSignUpRole] = useState<UserRole>('Employee');
   const [showSignUpPassword, setShowSignUpPassword] = useState(false);
   const [isSignUpSubmitting, setIsSignUpSubmitting] = useState(false);
 
@@ -207,7 +206,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
 
     setIsSignUpSubmitting(true);
     try {
-      const result = await signUpWithPassword(signUpName, signUpEmail, signUpPassword, signUpRole);
+      const result = await signUpWithPassword(signUpName, signUpEmail, signUpPassword);
       if (result.success) {
         onLoginSuccess();
       } else {
@@ -561,20 +560,15 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
                 </div>
               </div>
 
-              {/* Role Selection Field */}
-              <div className="space-y-1 relative">
-                <label className="text-xs font-semibold text-slate-400 block">
-                  Account Role
-                </label>
-                <select
-                  value={signUpRole}
-                  onChange={(e) => setSignUpRole(e.target.value as UserRole)}
-                  className="w-full bg-transparent border-b border-slate-200 py-2 text-sm text-slate-900 focus:outline-none focus:border-emerald-600 transition font-medium"
-                >
-                  <option value="Employee">Employee / Team Member</option>
-                  <option value="Product Manager">Product Manager / Project Lead</option>
-                  <option value="Admin">Workspace Admin</option>
-                </select>
+              {/* Default Employee Role Info Badge */}
+              <div className="bg-emerald-50/80 border border-emerald-200/80 p-3 rounded-2xl flex items-start gap-2.5 text-xs text-emerald-900">
+                <ShieldCheck className="w-4 h-4 text-emerald-600 flex-shrink-0 mt-0.5" />
+                <div>
+                  <span className="font-bold block mb-0.5 text-emerald-950">Default Employee Access</span>
+                  <span className="text-[11px] text-emerald-700 leading-relaxed block">
+                    All new accounts are registered as Employee by default. Workspace Admins receive a notification and can update your role anytime.
+                  </span>
+                </div>
               </div>
 
               {/* Password Field */}
