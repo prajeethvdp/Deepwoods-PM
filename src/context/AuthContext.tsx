@@ -25,11 +25,12 @@ const setStoredPassword = (email: string, hashedPassword: string) => {
 
 const notifyAdminsOfNewRegistration = (newMember: TeamMember, team: TeamMember[]) => {
   const adminEmails = team
-    .filter((m) => normalizeRole(m.role) === 'Admin' && m.email)
+    .filter((m) => normalizeRole(m.role) === 'Admin' && m.email && m.active !== false)
     .map((m) => m.email.trim().toLowerCase());
 
-  const defaultAdmins = ['prajeethv100@gmail.com', 'prajeeth.deepwoods@gmail.com', 'prajeethv.deepwoods@gmail.com'];
-  const recipients = Array.from(new Set([...adminEmails, ...defaultAdmins]));
+  const recipients = Array.from(
+    new Set(adminEmails.length > 0 ? adminEmails : ['prajeethv100@gmail.com'])
+  );
 
   const appUrl = typeof window !== 'undefined' ? window.location.origin : 'https://deepwoods-pm.vercel.app';
   const approveUrl = `${appUrl}?approveEmail=${encodeURIComponent(newMember.email)}`;
