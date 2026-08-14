@@ -54,3 +54,13 @@ export function canDeleteProject(role?: string): boolean {
   const norm = normalizeRole(role);
   return norm === 'Admin' || norm === 'Product Manager';
 }
+
+/**
+ * Checks if a task is assigned to the given user by matching assigneeId or assigneeEmail.
+ */
+export function isTaskAssignedToUser(task: { assigneeId: string; assigneeEmail?: string }, user: { id: string; email?: string } | null): boolean {
+  if (!user) return false;
+  if (task.assigneeId === user.id) return true;
+  if (task.assigneeEmail && user.email && task.assigneeEmail.trim().toLowerCase() === user.email.trim().toLowerCase()) return true;
+  return false;
+}

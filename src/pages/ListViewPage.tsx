@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useData } from '../context/DataContext';
 import { useAuth } from '../context/AuthContext';
+import { isTaskAssignedToUser } from '../lib/permissions';
 import { Priority, Task, TaskStatus } from '../types';
 import {
   Calendar,
@@ -70,7 +71,7 @@ export const ListViewPage: React.FC<ListViewPageProps> = ({
 
   // Filter tasks based on global filter settings
   const filteredTasks = tasks.filter((t) => {
-    if ((isEmployee || isMyTasksView) && user && t.assigneeId !== user.id) return false;
+    if ((isEmployee || isMyTasksView) && user && !isTaskAssignedToUser(t, user)) return false;
     if (selectedProjectId !== 'ALL' && t.projectId !== selectedProjectId) return false;
     if (
       filterOptions.searchQuery &&

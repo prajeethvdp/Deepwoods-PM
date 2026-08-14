@@ -12,6 +12,7 @@ import { KANBAN_COLUMNS } from '../../lib/constants';
 import { Task, TaskStatus } from '../../types';
 import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
+import { isTaskAssignedToUser } from '../../lib/permissions';
 import { Column } from './Column';
 import { TaskCard } from './TaskCard';
 
@@ -37,7 +38,7 @@ export const Board: React.FC<BoardProps> = ({ openTaskModalWithStatus, isMyTasks
   // Apply project and filter criteria
   const filteredTasks = tasks.filter((t) => {
     // Strictly filter to user's tasks if Employee or in My Tasks View
-    if ((isEmployee || isMyTasksView) && user && t.assigneeId !== user.id) {
+    if ((isEmployee || isMyTasksView) && user && !isTaskAssignedToUser(t, user)) {
       return false;
     }
     // Project filter

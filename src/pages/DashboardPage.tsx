@@ -20,6 +20,7 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { useData } from '../context/DataContext';
 import { useAuth } from '../context/AuthContext';
 import { STATUS_CONFIG } from '../lib/constants';
+import { isTaskAssignedToUser } from '../lib/permissions';
 import { parseISO, isBefore, isAfter, isSameDay, startOfDay, subDays, startOfMonth, endOfMonth, format } from 'date-fns';
 import { TaskStatus } from '../types';
 
@@ -59,7 +60,7 @@ export const DashboardPage: React.FC = () => {
     if (filterOptions.assigneeId !== 'ALL' && t.assigneeId !== filterOptions.assigneeId) return false;
     if (filterOptions.priority !== 'All' && t.priority !== filterOptions.priority) return false;
     if (filterOptions.status !== 'All' && t.status !== filterOptions.status) return false;
-    if (filterOptions.myTasksOnly && user && t.assigneeId !== user.id) return false;
+    if (filterOptions.myTasksOnly && user && !isTaskAssignedToUser(t, user)) return false;
     return true;
   });
 
@@ -118,7 +119,7 @@ export const DashboardPage: React.FC = () => {
 
   // 4. Role-Differentiated KPI Stat Calculations
   // Employees view metrics for tasks assigned to them; Admins/PMs view workspace-wide metrics.
-  const relevantTasks = isEmployee && user ? activeTasks.filter((t) => t.assigneeId === user.id) : activeTasks;
+  const relevantTasks = isEmployee && user ? activeTasks.filter((t) => isTaskAssignedToUser(t, user)) : activeTasks;
 
   const totalTasksCount = relevantTasks.length;
   const inProgressTasks = relevantTasks.filter((t) => t.status === 'In Progress');
@@ -199,13 +200,8 @@ export const DashboardPage: React.FC = () => {
     <div className="w-full min-h-full bg-[#EEF2F6] p-4 md:p-5 space-y-5 text-slate-800 font-sans select-none">
       {/* Employee Personal Greeting Header */}
       {isEmployee && (
-        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-2xs flex flex-wrap items-center justify-between gap-4">
-          <div className="space-y-1">
-            <h1 className="text-xl font-bold text-slate-900 font-serif">Welcome back, {user?.name || 'Team Member'} 👋</h1>
-            <p className="text-xs text-slate-500 font-medium">
-              You have <strong className="text-slate-900">{dueTodayTasks.length} task(s)</strong> due today and <strong className="text-amber-600">{inProgressTasks.length} task(s)</strong> currently in progress.
-            </p>
-          </div>
+        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-2xs">
+          <h1 className="text-xl font-bold text-slate-900 font-serif">Welcome back, {user?.name || 'Team Member'} 👋</h1>
         </div>
       )}
 

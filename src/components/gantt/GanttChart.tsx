@@ -14,6 +14,7 @@ import { useData } from '../../context/DataContext';
 import { Task, TaskStatus } from '../../types';
 import { AlertCircle, Calendar, ZoomIn, ZoomOut, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { isTaskAssignedToUser } from '../../lib/permissions';
 
 const safeParseDate = (dateStr: string | undefined | null): Date | null => {
   if (!dateStr || typeof dateStr !== 'string') return null;
@@ -39,14 +40,14 @@ interface GanttChartProps {
 
 export const GanttChart: React.FC<GanttChartProps> = ({ isMyTasksView = false }) => {
   const { tasks, projects, teamMembers, openTaskDetail, selectedProjectId, filterOptions } = useData();
-  const { user } = useAuth();
+  const { user, isEmployee } = useAuth();
   
   const [dayWidth, setDayWidth] = useState<number>(55); // 55px per day default for spacious layout
 
   // Filter tasks
   const filteredTasks = useMemo(() => {
     return tasks.filter((t) => {
-      if (isMyTasksView && user && t.assigneeId !== user.id) return false;
+      if ((isEmployee || isMyTasksView) && user && !isTaskAssignedToUser(t, user)) return false;
       if (selectedProjectId !== 'ALL' && t.projectId !== selectedProjectId) return false;
       if (
         filterOptions.searchQuery &&

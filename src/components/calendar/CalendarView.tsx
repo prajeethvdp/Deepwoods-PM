@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
+import { isTaskAssignedToUser } from '../../lib/permissions';
 import { Task, TaskStatus } from '../../types';
 import { STATUS_CONFIG } from '../../lib/constants';
 
@@ -57,7 +58,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ onAddDateTask }) => 
 
   // Scheduled tasks filtering — uses global header search
   const filteredTasks = tasks.filter((t) => {
-    if (isEmployee && user && t.assigneeId !== user.id) return false;
+    if (isEmployee && user && !isTaskAssignedToUser(t, user)) return false;
     const matchesSearch = !filterOptions.searchQuery ||
       t.title.toLowerCase().includes(filterOptions.searchQuery.toLowerCase()) ||
       (t.description || '').toLowerCase().includes(filterOptions.searchQuery.toLowerCase());
