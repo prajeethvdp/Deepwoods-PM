@@ -201,7 +201,10 @@ export const DashboardPage: React.FC = () => {
       {/* Employee Personal Greeting Header */}
       {isEmployee && (
         <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-2xs">
-          <h1 className="text-xl font-bold text-slate-900 font-serif">Welcome back, {user?.name || 'Team Member'} 👋</h1>
+          <h1 className="text-xl font-bold text-slate-900 font-serif flex items-center gap-2">
+            <span>Welcome back, {user?.name || 'Team Member'}</span>
+            <img src="/favicon.png" alt="Leaf logo" className="w-6 h-6 object-contain inline-block" />
+          </h1>
         </div>
       )}
 
