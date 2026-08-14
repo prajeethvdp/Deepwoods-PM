@@ -78,7 +78,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task }) => {
       {...attributes}
       {...listeners}
       onClick={() => openTaskDetail(task)}
-      className="bg-white rounded-lg p-3.5 border border-slate-200/60 shadow-xs hover:shadow-sm transition-all duration-150 cursor-pointer select-none group"
+      className="bg-white rounded-none p-3.5 border border-slate-200/60 shadow-xs hover:shadow-sm transition-all duration-150 cursor-pointer select-none group"
     >
       {/* Row 1: Avatar (top-left) + Days (top-right) */}
       <div className="flex items-center justify-between mb-2.5">

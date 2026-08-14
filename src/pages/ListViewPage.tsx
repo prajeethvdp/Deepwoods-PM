@@ -144,7 +144,7 @@ export const ListViewPage: React.FC<ListViewPageProps> = ({
         return (
           <div
             key={group.statusKey}
-            className="bg-white rounded-2xl border border-slate-200/80 shadow-2xs overflow-hidden transition-all duration-200"
+            className="bg-white rounded-none border border-slate-200/80 shadow-2xs overflow-hidden transition-all duration-200"
           >
             {/* Section Banner Header Bar */}
             <div

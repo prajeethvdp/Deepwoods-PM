@@ -146,7 +146,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({ isMyTasksView = false })
 
   if (filteredTasks.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center h-96 p-8 text-center bg-white rounded-2xl border border-slate-200 m-6">
+      <div className="flex flex-col items-center justify-center h-96 p-8 text-center bg-white rounded-none border border-slate-200 m-6">
         <Calendar className="w-12 h-12 text-slate-300 mb-3" />
         <h3 className="text-base font-bold text-slate-800 font-serif">No Tasks on Timeline</h3>
         <p className="text-xs text-slate-500 max-w-sm mt-1">
@@ -159,7 +159,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({ isMyTasksView = false })
   return (
     <div className="p-6 h-full flex flex-col bg-slate-50">
       {/* Zoom Toolbar */}
-      <div className="mb-4 flex items-center justify-between bg-white px-4 py-2.5 rounded-2xl border border-slate-200 shadow-xs">
+      <div className="mb-4 flex items-center justify-between bg-white px-4 py-2.5 rounded-none border border-slate-200 shadow-xs">
         <div className="flex items-center gap-2">
           <Calendar className="w-4 h-4 text-cyan-600" />
           <span className="text-xs font-bold text-slate-900">Gantt Timeline Scale</span>
@@ -171,7 +171,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({ isMyTasksView = false })
         <div className="flex items-center gap-2">
           <button
             onClick={() => setDayWidth((w) => Math.max(35, w - 5))}
-            className="p-1.5 bg-slate-100 hover:bg-slate-200 rounded-xl text-slate-700 transition"
+            className="p-1.5 bg-slate-100 hover:bg-slate-200 rounded-lg text-slate-700 transition"
             title="Zoom Out"
           >
             <ZoomOut className="w-3.5 h-3.5" />
@@ -180,8 +180,8 @@ export const GanttChart: React.FC<GanttChartProps> = ({ isMyTasksView = false })
             {dayWidth}px / day
           </span>
           <button
-            onClick={() => setDayWidth((w) => Math.min(90, w + 5))}
-            className="p-1.5 bg-slate-100 hover:bg-slate-200 rounded-xl text-slate-700 transition"
+            onClick={() => setDayWidth((w) => Math.min(100, w + 5))}
+            className="p-1.5 bg-slate-100 hover:bg-slate-200 rounded-lg text-slate-700 transition"
             title="Zoom In"
           >
             <ZoomIn className="w-3.5 h-3.5" />
@@ -190,7 +190,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({ isMyTasksView = false })
       </div>
 
       {/* Main Gantt Canvas Container */}
-      <div className="flex-1 bg-white rounded-2xl border border-slate-200 shadow-xs overflow-auto relative">
+      <div className="flex-1 bg-white rounded-none border border-slate-200 shadow-xs overflow-auto relative">
         <div
           style={{ width: `${leftSidebarWidth + timelineSvgWidth}px` }}
           className="relative select-none"

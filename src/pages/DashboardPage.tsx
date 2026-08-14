@@ -202,10 +202,10 @@ export const DashboardPage: React.FC = () => {
       {/* Row 1: Stat Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
         {/* 1. TOTAL / MY ASSIGNED TASKS */}
-        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-2xs flex flex-col justify-between h-32">
+        <div className="bg-white p-5 rounded-none border border-slate-200/80 shadow-2xs flex flex-col justify-between h-32">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider">{card1Title}</span>
-            <div className="w-7 h-7 rounded-lg border border-slate-200 text-slate-700 flex items-center justify-center bg-slate-50 shadow-2xs">
+            <div className="w-7 h-7 border border-slate-200 text-slate-700 flex items-center justify-center bg-slate-50 shadow-2xs">
               <ClipboardList className="w-4 h-4" />
             </div>
           </div>
@@ -218,10 +218,10 @@ export const DashboardPage: React.FC = () => {
         </div>
 
         {/* 2. OVERDUE TASKS / MY OVERDUE */}
-        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-2xs flex flex-col justify-between h-32">
+        <div className="bg-white p-5 rounded-none border border-slate-200/80 shadow-2xs flex flex-col justify-between h-32">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider">{card2Title}</span>
-            <div className="w-7 h-7 rounded-lg border border-slate-200 text-slate-700 flex items-center justify-center bg-slate-50 shadow-2xs">
+            <div className="w-7 h-7 border border-slate-200 text-slate-700 flex items-center justify-center bg-slate-50 shadow-2xs">
               <AlertCircle className="w-4 h-4" />
             </div>
           </div>
@@ -238,10 +238,10 @@ export const DashboardPage: React.FC = () => {
         </div>
 
         {/* 3. IN PROGRESS / MY IN PROGRESS */}
-        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-2xs flex flex-col justify-between h-32">
+        <div className="bg-white p-5 rounded-none border border-slate-200/80 shadow-2xs flex flex-col justify-between h-32">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider">{card3Title}</span>
-            <div className="w-7 h-7 rounded-lg border border-slate-200 text-slate-700 flex items-center justify-center bg-slate-50 shadow-2xs">
+            <div className="w-7 h-7 border border-slate-200 text-slate-700 flex items-center justify-center bg-slate-50 shadow-2xs">
               <Clock className="w-4 h-4" />
             </div>
           </div>
@@ -254,12 +254,12 @@ export const DashboardPage: React.FC = () => {
         </div>
 
         {/* 4. DONE / MY COMPLETED */}
-        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-2xs flex flex-col justify-between h-32">
+        <div className="bg-white p-5 rounded-none border border-slate-200/80 shadow-2xs flex flex-col justify-between h-32">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider truncate" title={card4Title}>
               {card4Title}
             </span>
-            <div className="w-7 h-7 rounded-lg border border-slate-200 text-slate-700 flex items-center justify-center bg-slate-50 shadow-2xs shrink-0">
+            <div className="w-7 h-7 border border-slate-200 text-slate-700 flex items-center justify-center bg-slate-50 shadow-2xs shrink-0">
               <Check className="w-4 h-4" />
             </div>
           </div>
@@ -368,7 +368,7 @@ export const DashboardPage: React.FC = () => {
           </div>
 
           {/* 2. Tasks Overview Data Table */}
-          <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-2xs space-y-4">
+          <div className="bg-white p-6 rounded-none border border-slate-200/80 shadow-2xs space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="text-base font-bold text-slate-900 font-serif">
                 {isEmployee ? 'My Assigned Tasks' : 'Tasks overview'}
@@ -435,7 +435,7 @@ export const DashboardPage: React.FC = () => {
                             </span>
                           </td>
                           <td className="py-3 px-2">
-                            <span className="px-2 py-0.5 border border-slate-200 text-slate-600 rounded-md text-[10px] font-bold">
+                            <span className="px-2 py-0.5 border border-slate-200 text-slate-600 text-[10px] font-bold">
                               {proj?.name || 'GHG Project'}
                             </span>
                           </td>
@@ -455,7 +455,7 @@ export const DashboardPage: React.FC = () => {
         {/* Right Column (2/7 width = 29% - Tasks Progress Donut & Interactive Due Tasks Widget) */}
         <div className="lg:col-span-2 space-y-5">
           {/* 1. Tasks Progress Donut */}
-          <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-2xs space-y-3">
+          <div className="bg-white p-5 rounded-none border border-slate-200/80 shadow-2xs space-y-3">
             <h2 className="text-base font-bold text-slate-900 font-serif">
               {isEmployee ? 'My Task Progress' : 'Tasks progress'}
             </h2>
@@ -480,7 +480,7 @@ export const DashboardPage: React.FC = () => {
                     contentStyle={{
                       backgroundColor: '#0F172A',
                       borderColor: '#334155',
-                      borderRadius: '12px',
+                      borderRadius: '0px',
                       color: '#F8FAFC',
                       fontSize: '12px',
                       fontWeight: 600,
@@ -518,7 +518,7 @@ export const DashboardPage: React.FC = () => {
           </div>
 
           {/* 2. Dedicated Interactive Due Tasks Widget (Today, This Week, Overdue) */}
-          <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-2xs space-y-4">
+          <div className="bg-white p-5 rounded-none border border-slate-200/80 shadow-2xs space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="text-base font-bold text-slate-900 flex items-center gap-1.5 font-serif">
                 <Hourglass className="w-4 h-4 text-amber-500" />

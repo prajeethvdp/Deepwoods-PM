@@ -161,7 +161,7 @@ export const TeamPage: React.FC = () => {
       )}
 
       {/* Header & Main Card Wrapper */}
-      <div className="bg-white rounded-2xl border border-slate-200/80 shadow-2xs overflow-hidden">
+      <div className="bg-white rounded-none border border-slate-200/80 shadow-2xs overflow-hidden">
         {/* Top Header */}
         <div className="p-6 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>

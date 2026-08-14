@@ -142,7 +142,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ onAddDateTask }) => 
 
       {/* Main Calendar Area - Clean White Grid */}
       <div className="flex-1 flex flex-col overflow-hidden bg-slate-100 p-4">
-        <div className="flex-1 flex flex-col rounded-2xl bg-white border border-slate-200 shadow-xs overflow-hidden">
+        <div className="flex-1 flex flex-col rounded-none bg-white border border-slate-200 shadow-xs overflow-hidden">
           {/* Day Names Header */}
           <div className="grid grid-cols-7 border-b border-slate-200 bg-slate-50/80">
             {dayNames.map((day) => (

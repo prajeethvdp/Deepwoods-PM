@@ -23,7 +23,7 @@ export const Column: React.FC<ColumnProps> = ({ status, tasks, onAddTask }) => {
   return (
     <div
       ref={setNodeRef}
-      className={`flex flex-col min-w-0 min-h-0 w-full bg-[#F7F8FA] rounded-lg border transition-all duration-150 h-full ${
+      className={`flex flex-col min-w-0 min-h-0 w-full bg-[#F7F8FA] rounded-none border transition-all duration-150 h-full ${
         isOver ? 'border-emerald-400 ring-2 ring-emerald-200' : 'border-slate-200'
       }`}
     >

@@ -25,6 +25,14 @@ body h1, body h2, body h3, body h4, body h5, body h6 {
   font-family: 'Inter', Helvetica, sans-serif;
 }
 
+/* Universal Sharp Edge (No border curves for cards, containers, tables & modals) */
+.rounded-2xl,
+.rounded-3xl,
+.rounded-xl,
+.rounded-lg {
+  border-radius: 0px !important;
+}
+
 /* Custom Scrollbars */
 ::-webkit-scrollbar {
   width: 6px;
