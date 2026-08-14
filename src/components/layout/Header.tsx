@@ -60,6 +60,7 @@ export const Header: React.FC<HeaderProps> = ({
   const unreadCount = emailNotifications.filter((n) => {
     if (n.read) return false;
     if (!user) return true;
+    if ((userRole === 'Admin' || user.role === 'Admin') && n.taskId === 'admin-alert') return true;
     const userEmail = user.email.trim().toLowerCase();
     const recipientEmail = (n.recipientEmail || '').trim().toLowerCase();
     const userName = (user.name || '').trim().toLowerCase();

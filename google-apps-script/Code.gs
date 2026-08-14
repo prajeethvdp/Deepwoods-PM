@@ -138,11 +138,22 @@ function handleSendGmailNotification(payload) {
       return createJsonResponse({ success: false, error: 'Missing recipientEmail or subject' });
     }
 
-    // Native Gmail CID Inline Image Attachment for Company Logo
-    var logoBlob = Utilities.newBlob(Utilities.base64Decode(LOGO_BASE64_DATA), 'image/png', 'company_logo.png');
-    var inlineImages = {
-      company_logo: logoBlob
+    var mailOptions = {
+      htmlBody: htmlBody,
+      name: 'Green Deepwoods'
     };
+
+    // Include logo inline image attachment only if referenced in htmlBody
+    if (htmlBody && htmlBody.indexOf('cid:company_logo') !== -1) {
+      try {
+        var logoBlob = Utilities.newBlob(Utilities.base64Decode(LOGO_BASE64_DATA), 'image/png', 'company_logo.png');
+        mailOptions.inlineImages = {
+          company_logo: logoBlob
+        };
+      } catch (logoErr) {
+        Logger.log('Logo blob conversion error: ' + logoErr);
+      }
+    }
 
     // Native Gmail File Attachments
     var scriptAttachments = [];
@@ -163,12 +174,6 @@ function handleSendGmailNotification(payload) {
         }
       }
     }
-
-    var mailOptions = {
-      htmlBody: htmlBody,
-      name: 'Green Deepwoods',
-      inlineImages: inlineImages
-    };
 
     if (scriptAttachments.length > 0) {
       mailOptions.attachments = scriptAttachments;

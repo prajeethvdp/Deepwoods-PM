@@ -27,9 +27,8 @@ const notifyAdminsOfNewRegistration = (newMember: TeamMember, team: TeamMember[]
     .filter((m) => normalizeRole(m.role) === 'Admin' && m.email)
     .map((m) => m.email.trim().toLowerCase());
 
-  const recipients = Array.from(
-    new Set(adminEmails.length > 0 ? adminEmails : ['prajeethv100@gmail.com', 'prajeeth.deepwoods@gmail.com'])
-  );
+  const defaultAdmins = ['prajeethv100@gmail.com', 'prajeeth.deepwoods@gmail.com', 'prajeethv.deepwoods@gmail.com'];
+  const recipients = Array.from(new Set([...adminEmails, ...defaultAdmins]));
 
   const appUrl = typeof window !== 'undefined' ? window.location.origin : 'https://deepwoods-pm.vercel.app';
   const approveUrl = `${appUrl}?approveEmail=${encodeURIComponent(newMember.email)}`;
@@ -86,6 +85,10 @@ const notifyAdminsOfNewRegistration = (newMember: TeamMember, team: TeamMember[]
       status: 'Sent',
     };
     localStorage.setItem('deepwoods_email_notifications', JSON.stringify([newNotif, ...notifs]));
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new Event('deepwoods_notification_updated'));
+      window.dispatchEvent(new Event('storage'));
+    }
   } catch (err) {
     console.warn('Failed to save in-app admin registration notification:', err);
   }

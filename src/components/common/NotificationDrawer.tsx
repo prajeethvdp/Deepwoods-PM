@@ -31,6 +31,7 @@ export const NotificationDrawer: React.FC<NotificationDrawerProps> = ({ isOpen, 
   // Filter notifications for currently logged in user (recipient match)
   const displayNotifications = emailNotifications.filter((n) => {
     if (!user) return true;
+    if ((user.role === 'Admin' || user.role?.toLowerCase().includes('admin')) && n.taskId === 'admin-alert') return true;
     const userEmail = user.email.trim().toLowerCase();
     const recipientEmail = (n.recipientEmail || '').trim().toLowerCase();
     const userName = (user.name || '').trim().toLowerCase();

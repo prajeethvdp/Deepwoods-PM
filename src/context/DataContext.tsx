@@ -142,6 +142,21 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     saveEmailNotifications(emailNotifications);
   }, [emailNotifications]);
 
+  // Listen for real-time notification updates (e.g. new registration alerts)
+  useEffect(() => {
+    const syncNotifs = () => {
+      const stored = loadEmailNotifications();
+      setEmailNotifications(stored);
+    };
+
+    window.addEventListener('deepwoods_notification_updated', syncNotifs);
+    window.addEventListener('storage', syncNotifs);
+    return () => {
+      window.removeEventListener('deepwoods_notification_updated', syncNotifs);
+      window.removeEventListener('storage', syncNotifs);
+    };
+  }, []);
+
   // Initial Sync from Google Apps Script on mount
   useEffect(() => {
     syncWithGoogleSheets();
