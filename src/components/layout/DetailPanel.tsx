@@ -173,19 +173,21 @@ export const DetailPanel: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
-            {/* Send Deadline Reminder Email Action Button */}
-            <button
-              onClick={handleSendReminder}
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap border shadow-2xs ${
-                reminderSent
-                  ? 'bg-white text-emerald-600 border-emerald-300'
-                  : 'bg-white hover:bg-slate-50 text-amber-700 border-amber-300'
-              }`}
-              title="Send Deadline Reminder Email to Assignee"
-            >
-              {reminderSent ? <MailCheck className="w-3.5 h-3.5 text-emerald-600" /> : <Bell className="w-3.5 h-3.5 text-amber-600 shrink-0" />}
-              <span>{reminderSent ? 'Reminder Sent!' : 'Remind Deadline'}</span>
-            </button>
+            {/* Send Deadline Reminder Email Action Button (Admin & PM only) */}
+            {!isEmployee && (
+              <button
+                onClick={handleSendReminder}
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap border shadow-2xs ${
+                  reminderSent
+                    ? 'bg-white text-emerald-600 border-emerald-300'
+                    : 'bg-white hover:bg-slate-50 text-amber-700 border-amber-300'
+                }`}
+                title="Send Deadline Reminder Email to Assignee"
+              >
+                {reminderSent ? <MailCheck className="w-3.5 h-3.5 text-emerald-600" /> : <Bell className="w-3.5 h-3.5 text-amber-600 shrink-0" />}
+                <span>{reminderSent ? 'Reminder Sent!' : 'Remind Deadline'}</span>
+              </button>
+            )}
 
             {canDeleteTask(user?.role, selectedTask, user?.id) && (
               <button
@@ -207,21 +209,26 @@ export const DetailPanel: React.FC = () => {
 
         {/* Scrollable Content */}
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
-          {/* Editable Title */}
+          {/* Title */}
           <div>
             <textarea
               value={title}
+              disabled={isEmployee}
               onChange={(e) => setTitle(e.target.value)}
               onBlur={handleTitleBlur}
               rows={2}
-              className="w-full text-lg font-bold text-slate-900 border border-transparent hover:border-slate-300 focus:border-cyan-500 focus:outline-none p-2 rounded-lg resize-none transition"
+              className={`w-full text-lg font-bold text-slate-900 border border-transparent rounded-lg resize-none transition ${
+                isEmployee
+                  ? 'bg-transparent cursor-default focus:outline-none'
+                  : 'hover:border-slate-300 focus:border-cyan-500 focus:outline-none p-2'
+              }`}
               placeholder="Task Title..."
             />
           </div>
 
           {/* Properties Grid */}
           <div className="bg-slate-50/80 rounded-xl p-4 border border-slate-200 space-y-3 text-xs">
-            {/* Status */}
+            {/* Status (Employees CAN update status of their assigned tasks) */}
             <div className="grid grid-cols-3 items-center">
               <span className="text-slate-500 font-medium flex items-center gap-1.5">
                 <CheckCircle2 className="w-3.5 h-3.5 text-slate-400" /> Status
@@ -233,7 +240,7 @@ export const DetailPanel: React.FC = () => {
                     setStatus(e.target.value as TaskStatus);
                     handleFieldChange('status', e.target.value);
                   }}
-                  className="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 font-medium text-slate-800 focus:outline-none focus:ring-1 focus:ring-cyan-500"
+                  className="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 font-medium text-slate-800 focus:outline-none focus:ring-1 focus:ring-cyan-500 cursor-pointer"
                 >
                   {(Object.keys(STATUS_CONFIG) as TaskStatus[]).map((s) => (
                     <option key={s} value={s}>
@@ -252,11 +259,12 @@ export const DetailPanel: React.FC = () => {
               <div className="col-span-2">
                 <select
                   value={priority}
+                  disabled={isEmployee}
                   onChange={(e) => {
                     setPriority(e.target.value as Priority);
                     handleFieldChange('priority', e.target.value);
                   }}
-                  className="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 font-medium text-slate-800 focus:outline-none focus:ring-1 focus:ring-cyan-500"
+                  className="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 font-medium text-slate-800 focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-75 disabled:bg-slate-100/80 disabled:cursor-not-allowed"
                 >
                   {(Object.keys(PRIORITY_CONFIG) as Priority[]).map((p) => (
                     <option key={p} value={p}>
@@ -280,7 +288,7 @@ export const DetailPanel: React.FC = () => {
                     setAssigneeId(e.target.value);
                     handleFieldChange('assigneeId', e.target.value);
                   }}
-                  className="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 font-medium text-slate-800 focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-75 disabled:bg-slate-100 disabled:cursor-not-allowed"
+                  className="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 font-medium text-slate-800 focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-75 disabled:bg-slate-100/80 disabled:cursor-not-allowed"
                 >
                   {teamMembers.filter(m => m.role !== 'Admin').map((m) => (
                     <option key={m.id} value={m.id}>
@@ -299,11 +307,12 @@ export const DetailPanel: React.FC = () => {
               <div className="col-span-2">
                 <select
                   value={assignorId}
+                  disabled={isEmployee}
                   onChange={(e) => {
                     setAssignorId(e.target.value);
                     handleFieldChange('assignorId', e.target.value);
                   }}
-                  className="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 font-medium text-slate-800 focus:outline-none focus:ring-1 focus:ring-cyan-500"
+                  className="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 font-medium text-slate-800 focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-75 disabled:bg-slate-100/80 disabled:cursor-not-allowed"
                 >
                   {teamMembers.map((m) => (
                     <option key={m.id} value={m.id}>
@@ -322,11 +331,12 @@ export const DetailPanel: React.FC = () => {
               <div className="col-span-2">
                 <select
                   value={projectId}
+                  disabled={isEmployee}
                   onChange={(e) => {
                     setProjectId(e.target.value);
                     handleFieldChange('projectId', e.target.value);
                   }}
-                  className="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 font-medium text-slate-800 focus:outline-none focus:ring-1 focus:ring-cyan-500"
+                  className="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 font-medium text-slate-800 focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-75 disabled:bg-slate-100/80 disabled:cursor-not-allowed"
                 >
                   {projects.map((p) => (
                     <option key={p.id} value={p.id}>
@@ -346,11 +356,12 @@ export const DetailPanel: React.FC = () => {
                 <input
                   type="date"
                   value={startDate}
+                  disabled={isEmployee}
                   onChange={(e) => {
                     setStartDate(e.target.value);
                     handleFieldChange('startDate', e.target.value);
                   }}
-                  className="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 font-medium text-slate-800 focus:outline-none focus:ring-1 focus:ring-cyan-500"
+                  className="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 font-medium text-slate-800 focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-75 disabled:bg-slate-100/80 disabled:cursor-not-allowed"
                 />
               </div>
             </div>
@@ -364,11 +375,12 @@ export const DetailPanel: React.FC = () => {
                 <input
                   type="date"
                   value={dueDate}
+                  disabled={isEmployee}
                   onChange={(e) => {
                     setDueDate(e.target.value);
                     handleFieldChange('dueDate', e.target.value);
                   }}
-                  className={`w-full bg-white border rounded-lg px-2.5 py-1.5 font-medium focus:outline-none focus:ring-1 ${
+                  className={`w-full bg-white border rounded-lg px-2.5 py-1.5 font-medium focus:outline-none focus:ring-1 disabled:opacity-75 disabled:bg-slate-100/80 disabled:cursor-not-allowed ${
                     isOverdue
                       ? 'border-red-400 text-red-700 bg-red-50 focus:ring-red-400'
                       : 'border-slate-200 text-slate-800 focus:ring-cyan-500'
@@ -448,11 +460,12 @@ export const DetailPanel: React.FC = () => {
             </label>
             <textarea
               value={description}
+              disabled={isEmployee}
               onChange={(e) => setDescription(e.target.value)}
               onBlur={handleDescriptionBlur}
               rows={4}
               placeholder="Add detailed task notes or technical guidance..."
-              className="w-full text-xs text-slate-800 bg-slate-50/60 border border-slate-200 rounded-lg p-3 focus:bg-white focus:border-cyan-500 focus:outline-none transition resize-y"
+              className="w-full text-xs text-slate-800 bg-slate-50/60 border border-slate-200 rounded-lg p-3 focus:bg-white focus:border-cyan-500 focus:outline-none transition resize-y disabled:opacity-75 disabled:bg-slate-100/80 disabled:cursor-not-allowed"
             />
           </div>
 
