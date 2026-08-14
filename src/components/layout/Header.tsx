@@ -412,6 +412,7 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
 
         {/* Sync Button */}
+        {/* Sync with Google Sheets */}
         <button
           onClick={syncWithGoogleSheets}
           disabled={isSyncing}
@@ -420,17 +421,6 @@ export const Header: React.FC<HeaderProps> = ({
         >
           <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin text-emerald-600' : ''}`} />
         </button>
-
-        {/* Primary Action Button: New Task (Hidden for Employees) */}
-        {!isEmployee && (
-          <button
-            onClick={openNewTaskModal}
-            className="flex items-center gap-1.5 px-4 py-2 bg-[#059669] hover:bg-[#047857] text-white rounded-full text-xs font-bold shadow-xs transition transform active:scale-95"
-          >
-            <Plus className="w-4 h-4" />
-            <span>New Task</span>
-          </button>
-        )}
 
         {/* User Badge Avatar & Role */}
         {user && (
