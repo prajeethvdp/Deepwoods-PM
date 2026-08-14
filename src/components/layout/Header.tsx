@@ -217,8 +217,8 @@ export const Header: React.FC<HeaderProps> = ({
 
       {/* Right: Global Actions (Search, Notifications, Filters, Sync, + New Task, Profile) */}
       <div className="flex items-center gap-1.5 sm:gap-3">
-        {/* Search Bar - Always visible, works across all views */}
-        {currentTab !== 'team' && currentTab !== 'docs' && (
+        {/* Search Bar - Hidden on Dashboard, Team Settings, and Docs */}
+        {currentTab !== 'dashboard' && currentTab !== 'team' && currentTab !== 'docs' && (
           <div className="relative w-28 sm:w-40 md:w-52">
             <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
             <input
