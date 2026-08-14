@@ -1,32 +1,23 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,400;1,600&family=Lora:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,400;1,600&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400;1,600&display=swap');
 @import "tailwindcss";
 
 @theme {
-  --font-serif: Lora, Georgia, serif;
-  --font-sans: Inter, Helvetica, sans-serif;
+  --font-sans: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-serif: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
-/* Universal selector ensuring Inter for all non-heading elements */
-html, body, div, span, p, a, button, input, select, textarea, label, td, th, li, ul, ol, strong, b, em, small {
-  font-family: Inter, Helvetica, sans-serif;
+/* Universal typography stack for clean modern enterprise UI */
+html, body, div, span, p, a, button, input, select, textarea, label, td, th, li, ul, ol, strong, b, em, small, h1, h2, h3, h4, h5, h6 {
+  font-family: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
-/* Force Lora for Headings & Title Elements */
+/* Clean Heading Typography Override */
 h1, h2, h3, h4, h5, h6,
 .font-serif,
 .font-display,
 .font-heading,
 body h1, body h2, body h3, body h4, body h5, body h6 {
-  font-family: Lora, Georgia, serif !important;
-}
-
-/* Utility Class Overrides */
-.font-sans {
-  font-family: Inter, Helvetica, sans-serif !important;
-}
-
-.font-serif, .font-display, .font-heading {
-  font-family: Lora, Georgia, serif !important;
+  font-family: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
 }
 
 /* Custom Scrollbars */

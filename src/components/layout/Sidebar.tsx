@@ -4,7 +4,6 @@ import {
   Kanban,
   GanttChartSquare,
   ListTodo,
-  UserCheck,
   Users,
   Calendar,
   LogOut,
@@ -13,6 +12,9 @@ import {
   ChevronRight,
   Folder,
   Trash2,
+  Plus,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from 'lucide-react';
 import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
@@ -29,140 +31,193 @@ interface SidebarProps {
 export const Sidebar: React.FC<SidebarProps> = ({
   currentTab,
   setCurrentTab,
+  openNewTaskModal,
   openNewProjectModal,
   navigateToProject,
 }) => {
   const { tasks, projects, deleteProject } = useData();
-  const { user, logout, canManageProjects, canAccessTeamPage } = useAuth();
-  const [projectsOpen, setProjectsOpen] = useState(false);
+  const { user, logout, canAccessTeamPage, canManageProjects, isEmployee } = useAuth();
+  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [projectsOpen, setProjectsOpen] = useState(true);
 
-  const myTasksCount = useMemo(() => {
-    if (!user) return 0;
-    return tasks.filter((t) => t.assigneeId === user.id && t.status !== 'Done').length;
-  }, [tasks, user]);
-
-  const allNavItems: { id: string; label: string; shortLabel: string; icon: any; adminOrPmOnly?: boolean; badge?: number }[] = [
-    { id: 'dashboard', label: 'Dashboard', shortLabel: 'Home', icon: LayoutDashboard },
-    { id: 'kanban', label: 'Kanban Board', shortLabel: 'Kanban', icon: Kanban },
-    { id: 'gantt', label: 'Gantt Chart', shortLabel: 'Gantt', icon: GanttChartSquare },
-    { id: 'list', label: 'List View', shortLabel: 'List', icon: ListTodo },
-    { id: 'calendar', label: 'Calendar View', shortLabel: 'Calendar', icon: Calendar },
-    { id: 'team', label: 'Team Settings', shortLabel: 'Team', icon: Users, adminOrPmOnly: true },
+  const mainNavItems = [
+    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { id: 'kanban', label: 'Kanban Board', icon: Kanban },
+    { id: 'gantt', label: 'Gantt Chart', icon: GanttChartSquare },
+    { id: 'list', label: 'List View', icon: ListTodo },
+    { id: 'calendar', label: 'Calendar View', icon: Calendar },
   ];
 
-  const navItems = useMemo(() => {
-    return allNavItems.filter((item) => !item.adminOrPmOnly || canAccessTeamPage);
-  }, [canAccessTeamPage, myTasksCount]);
+  const adminNavItems = useMemo(() => {
+    if (!canAccessTeamPage) return [];
+    return [{ id: 'team', label: 'Team Settings', icon: Users }];
+  }, [canAccessTeamPage]);
 
   return (
     <>
-      {/* DESKTOP SIDEBAR (md and above) */}
-      <aside className="hidden md:flex group w-16 hover:w-56 bg-white rounded-3xl p-3 border border-slate-200/80 shadow-xs flex-col justify-between h-full select-none flex-shrink-0 z-40 transition-all duration-300 ease-in-out overflow-hidden">
-        {/* Top Section */}
-        <div className="flex flex-col gap-4">
-          {/* Brand Logo */}
-          <div
-            onClick={() => setCurrentTab('dashboard')}
-            className="flex items-center justify-center p-2 cursor-pointer transition rounded-2xl hover:bg-slate-50 overflow-hidden min-h-[44px] relative"
-            title="Dashboard"
-          >
-            <img
-              src="/favicon.png"
-              alt="Deepwoods Leaf Logo"
-              className="w-8 h-8 object-contain transition-opacity duration-200 group-hover:opacity-0 flex-shrink-0"
-            />
-            <img
-              src="/logo.png"
-              alt="Deepwoods Logo"
-              className="h-8 w-auto max-w-[160px] object-contain transition-opacity duration-200 opacity-0 group-hover:opacity-100 absolute inset-0 m-auto"
-            />
+      {/* DESKTOP SIDEBAR (Asana & Linear Inspired Clean SaaS Design) */}
+      <aside
+        className={`hidden md:flex flex-col justify-between h-full bg-[#18191B] text-slate-300 border-r border-slate-800 select-none flex-shrink-0 z-40 transition-all duration-300 ${
+          isCollapsed ? 'w-16 p-2.5' : 'w-60 p-4'
+        }`}
+      >
+        {/* Top Header & Brand */}
+        <div className="flex flex-col gap-5 min-h-0 overflow-y-auto pr-0.5 custom-scrollbar">
+          {/* Brand Header with Collapse Toggle */}
+          <div className="flex items-center justify-between gap-2">
+            {!isCollapsed ? (
+              <div
+                onClick={() => setCurrentTab('dashboard')}
+                className="flex items-center gap-2.5 cursor-pointer group"
+              >
+                <div className="w-8 h-8 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 font-extrabold shadow-sm shrink-0">
+                  <img src="/favicon.png" alt="Logo" className="w-5 h-5 object-contain" />
+                </div>
+                <div className="flex flex-col min-w-0">
+                  <span className="font-extrabold text-sm text-white tracking-tight leading-none group-hover:text-emerald-400 transition">
+                    DEEPWOODS
+                  </span>
+                  <span className="text-[10px] text-slate-400 font-semibold tracking-wider uppercase mt-0.5">
+                    Workspace
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <div
+                onClick={() => setCurrentTab('dashboard')}
+                className="w-9 h-9 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 font-extrabold cursor-pointer mx-auto"
+                title="Dashboard"
+              >
+                <img src="/favicon.png" alt="Logo" className="w-5 h-5 object-contain" />
+              </div>
+            )}
+
+            <button
+              onClick={() => setIsCollapsed((prev) => !prev)}
+              className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/80 transition shrink-0 hidden lg:block"
+              title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            >
+              {isCollapsed ? <PanelLeftOpen className="w-4 h-4" /> : <PanelLeftClose className="w-4 h-4" />}
+            </button>
           </div>
 
-          {/* Separator */}
-          <div className="h-px bg-slate-200/80 w-full" />
+          {/* Primary Action Button (+ New Task) */}
+          {!isEmployee && (
+            <div>
+              {!isCollapsed ? (
+                <button
+                  onClick={openNewTaskModal}
+                  className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-3.5 py-2.5 rounded-xl shadow-sm transition flex items-center justify-center gap-2 active:scale-98"
+                >
+                  <Plus className="w-4 h-4 stroke-[2.5]" />
+                  <span>Create Task</span>
+                </button>
+              ) : (
+                <button
+                  onClick={openNewTaskModal}
+                  className="w-9 h-9 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl shadow-sm transition flex items-center justify-center mx-auto"
+                  title="Create Task"
+                >
+                  <Plus className="w-4 h-4 stroke-[2.5]" />
+                </button>
+              )}
+            </div>
+          )}
 
-          {/* Nav Items */}
-          <div className="flex flex-col gap-1.5">
-            {navItems.map((item) => {
+          {/* SECTION 1: WORKSPACE VIEWS */}
+          <div className="space-y-1">
+            {!isCollapsed && (
+              <div className="px-2 py-1 text-[10px] font-extrabold uppercase tracking-widest text-slate-500">
+                Workspace
+              </div>
+            )}
+            {mainNavItems.map((item) => {
               const Icon = item.icon;
               const isActive = currentTab === item.id;
               return (
                 <button
                   key={item.id}
                   onClick={() => setCurrentTab(item.id)}
-                  className={`relative p-2.5 rounded-2xl transition-all duration-200 flex items-center gap-3 overflow-hidden ${
+                  title={isCollapsed ? item.label : undefined}
+                  className={`w-full text-xs font-semibold px-2.5 py-2 rounded-xl transition flex items-center gap-3 ${
                     isActive
-                      ? 'bg-emerald-50 text-emerald-600 border border-emerald-200/80 shadow-2xs font-extrabold'
-                      : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100 font-semibold'
-                  }`}
+                      ? 'bg-slate-800 text-white font-bold border border-slate-700 shadow-2xs'
+                      : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/50'
+                  } ${isCollapsed ? 'justify-center px-0' : ''}`}
                 >
-                  <Icon className="w-5 h-5 shrink-0" />
-                  <span className="text-xs truncate whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200 delay-75 font-sans">
-                    {item.label}
-                  </span>
-                  {item.badge !== undefined && item.badge > 0 && (
-                    <span className="ml-auto bg-emerald-600 text-white rounded-full text-[9px] font-extrabold px-1.5 py-0.5 shadow-xs shrink-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                      {item.badge}
-                    </span>
-                  )}
+                  <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-emerald-400' : 'text-slate-400'}`} />
+                  {!isCollapsed && <span className="truncate">{item.label}</span>}
                 </button>
               );
             })}
           </div>
-        </div>
 
-        {/* Bottom: Projects Dropdown + Sign Out */}
-        <div className="flex flex-col gap-2 pt-2 border-t border-slate-200/80">
-          {/* Projects Dropdown */}
-          <div>
-            <button
-              onClick={() => setProjectsOpen((prev) => !prev)}
-              className="w-full p-2.5 rounded-2xl text-slate-600 hover:bg-slate-100 transition font-semibold flex items-center gap-3 overflow-hidden"
-              title="Projects"
-            >
-              <Folder className="w-5 h-5 shrink-0 text-emerald-600" />
-              <span className="text-xs truncate whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200 delay-75 flex-1 text-left font-sans">
-                Projects
-              </span>
-              <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 shrink-0">
-                {projectsOpen ? (
-                  <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
-                ) : (
-                  <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
-                )}
-              </span>
-            </button>
+          {/* SECTION 2: PROJECTS */}
+          <div className="space-y-1 pt-2 border-t border-slate-800/80">
+            {!isCollapsed ? (
+              <div className="flex items-center justify-between px-2 py-1">
+                <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-500">
+                  Projects ({projects.length})
+                </span>
+                <div className="flex items-center gap-1">
+                  {canManageProjects && (
+                    <button
+                      onClick={openNewProjectModal}
+                      className="p-1 rounded text-slate-400 hover:text-emerald-400 hover:bg-slate-800 transition"
+                      title="New Project"
+                    >
+                      <FolderPlus className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                  <button
+                    onClick={() => setProjectsOpen((prev) => !prev)}
+                    className="p-1 rounded text-slate-400 hover:text-slate-200 transition"
+                  >
+                    {projectsOpen ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="w-full text-center text-[10px] font-bold text-slate-500 uppercase tracking-widest py-1">
+                Proj
+              </div>
+            )}
 
-            {/* Project list — only visible when sidebar is expanded */}
-            {projectsOpen && (
-              <div className="mt-1 ml-2 flex flex-col gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+            {(projectsOpen || isCollapsed) && (
+              <div className="space-y-0.5">
                 {projects.length === 0 ? (
-                  <span className="text-[11px] text-slate-400 italic px-3 py-1">No projects yet</span>
+                  !isCollapsed && (
+                    <span className="text-[11px] text-slate-500 italic px-2.5 py-1 block">
+                      No active projects
+                    </span>
+                  )
                 ) : (
                   projects.map((proj) => (
                     <div
                       key={proj.id}
-                      className="flex items-center gap-2 px-2 py-1.5 rounded-xl hover:bg-emerald-50 cursor-pointer transition group/proj"
+                      onClick={() => navigateToProject(proj.id)}
+                      title={isCollapsed ? proj.name : undefined}
+                      className={`group/item px-2.5 py-1.5 rounded-xl cursor-pointer transition flex items-center justify-between text-xs font-semibold text-slate-400 hover:text-white hover:bg-slate-800/60 ${
+                        isCollapsed ? 'justify-center px-0' : ''
+                      }`}
                     >
-                      <span
-                        className="w-2.5 h-2.5 rounded-full flex-shrink-0"
-                        style={{ backgroundColor: proj.color || '#06B6D4' }}
-                      />
-                      <span
-                        onClick={() => navigateToProject(proj.id)}
-                        className="text-[11px] font-semibold text-slate-700 truncate flex-1"
-                      >
-                        {proj.name}
-                      </span>
-                      {canManageProjects && (
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <span
+                          className="w-2.5 h-2.5 rounded-full shrink-0"
+                          style={{ backgroundColor: proj.color || '#06B6D4' }}
+                        />
+                        {!isCollapsed && <span className="truncate">{proj.name}</span>}
+                      </div>
+
+                      {!isCollapsed && canManageProjects && (
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            if (window.confirm(`Delete project "${proj.name}"? This cannot be undone.`)) {
+                            if (window.confirm(`Delete project "${proj.name}"?`)) {
                               deleteProject(proj.id);
                             }
                           }}
-                          className="opacity-0 group-hover/proj:opacity-100 p-0.5 rounded text-slate-400 hover:text-red-500 hover:bg-red-50 transition flex-shrink-0"
+                          className="opacity-0 group-hover/item:opacity-100 p-1 rounded text-slate-500 hover:text-rose-400 hover:bg-slate-800 transition"
                           title="Delete project"
                         >
                           <Trash2 className="w-3 h-3" />
@@ -171,38 +226,87 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     </div>
                   ))
                 )}
-                {canManageProjects && (
-                  <button
-                    onClick={openNewProjectModal}
-                    className="flex items-center gap-2 px-2 py-1.5 rounded-xl text-emerald-600 hover:bg-emerald-50 transition font-bold text-[11px] mt-0.5"
-                  >
-                    <FolderPlus className="w-3.5 h-3.5 shrink-0" />
-                    <span>New Project</span>
-                  </button>
-                )}
               </div>
             )}
           </div>
 
-          {/* Sign Out */}
+          {/* SECTION 3: ADMINISTRATION */}
+          {adminNavItems.length > 0 && (
+            <div className="space-y-1 pt-2 border-t border-slate-800/80">
+              {!isCollapsed && (
+                <div className="px-2 py-1 text-[10px] font-extrabold uppercase tracking-widest text-slate-500">
+                  Administration
+                </div>
+              )}
+              {adminNavItems.map((item) => {
+                const Icon = item.icon;
+                const isActive = currentTab === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => setCurrentTab(item.id)}
+                    title={isCollapsed ? item.label : undefined}
+                    className={`w-full text-xs font-semibold px-2.5 py-2 rounded-xl transition flex items-center gap-3 ${
+                      isActive
+                        ? 'bg-slate-800 text-white font-bold border border-slate-700 shadow-2xs'
+                        : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/50'
+                    } ${isCollapsed ? 'justify-center px-0' : ''}`}
+                  >
+                    <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-emerald-400' : 'text-slate-400'}`} />
+                    {!isCollapsed && <span className="truncate">{item.label}</span>}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* BOTTOM USER PROFILE WIDGET */}
+        <div className="pt-3 border-t border-slate-800/80">
           {user && (
-            <button
-              onClick={logout}
-              className="p-2.5 rounded-2xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition flex items-center gap-3 overflow-hidden"
-              title="Sign Out"
-            >
-              <LogOut className="w-5 h-5 shrink-0" />
-              <span className="text-xs truncate whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200 delay-75 font-sans">
-                Sign Out
-              </span>
-            </button>
+            <div className="flex items-center justify-between gap-2 p-1.5 rounded-xl bg-slate-900/60 border border-slate-800">
+              {!isCollapsed ? (
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div
+                    className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-xs font-extrabold shrink-0 shadow-xs"
+                    style={{ backgroundColor: user.color || '#2563EB' }}
+                  >
+                    {user.name.charAt(0).toUpperCase()}
+                  </div>
+                  <div className="flex flex-col min-w-0">
+                    <span className="text-xs font-bold text-slate-100 truncate">{user.name}</span>
+                    <span className="text-[9px] font-extrabold text-emerald-400 uppercase tracking-wider">
+                      {user.role}
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                <div
+                  className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-xs font-extrabold mx-auto shadow-xs"
+                  style={{ backgroundColor: user.color || '#2563EB' }}
+                  title={`${user.name} (${user.role})`}
+                >
+                  {user.name.charAt(0).toUpperCase()}
+                </div>
+              )}
+
+              {!isCollapsed && (
+                <button
+                  onClick={logout}
+                  className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-slate-800 rounded-lg transition"
+                  title="Sign Out"
+                >
+                  <LogOut className="w-4 h-4" />
+                </button>
+              )}
+            </div>
           )}
         </div>
       </aside>
 
-      {/* MOBILE BOTTOM NAVIGATION BAR (below md breakpoint) */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-t border-slate-200 px-2 py-1.5 flex items-center justify-around shadow-lg">
-        {navItems.map((item) => {
+      {/* MOBILE BOTTOM NAVIGATION BAR (Clean & Precise for small screens) */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-[#18191B] border-t border-slate-800 px-3 py-2 flex items-center justify-around shadow-xl">
+        {mainNavItems.map((item) => {
           const Icon = item.icon;
           const isActive = currentTab === item.id;
           return (
@@ -210,18 +314,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
               key={item.id}
               onClick={() => setCurrentTab(item.id)}
               className={`flex flex-col items-center justify-center p-1.5 rounded-xl transition ${
-                isActive ? 'text-emerald-600 font-extrabold scale-105' : 'text-slate-400 font-medium'
+                isActive ? 'text-emerald-400 font-extrabold' : 'text-slate-400 font-medium'
               }`}
             >
-              <div className="relative">
-                <Icon className="w-5 h-5" />
-                {item.badge !== undefined && item.badge > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-emerald-600 text-white rounded-full text-[8px] font-extrabold w-3.5 h-3.5 flex items-center justify-center">
-                    {item.badge}
-                  </span>
-                )}
-              </div>
-              <span className="text-[10px] tracking-tight mt-0.5 font-sans">{item.shortLabel}</span>
+              <Icon className="w-5 h-5" />
+              <span className="text-[10px] tracking-tight mt-0.5">{item.label.split(' ')[0]}</span>
             </button>
           );
         })}
@@ -229,3 +326,4 @@ export const Sidebar: React.FC<SidebarProps> = ({
     </>
   );
 };
+

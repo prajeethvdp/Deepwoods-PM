@@ -183,7 +183,7 @@ export const Header: React.FC<HeaderProps> = ({
       {/* Left: Page Title & Project Dropdown */}
       <div className="flex items-center gap-2.5 sm:gap-4 shrink-0">
         <div className="flex items-center gap-2">
-          <h1 className="font-bold text-base sm:text-lg text-slate-900 tracking-tight font-serif whitespace-nowrap">
+          <h1 className="font-bold text-base sm:text-lg text-slate-900 tracking-tight whitespace-nowrap font-sans">
             {getTabTitle()}
           </h1>
         </div>
