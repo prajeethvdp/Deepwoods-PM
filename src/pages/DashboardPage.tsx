@@ -174,7 +174,7 @@ export const DashboardPage: React.FC = () => {
   };
 
   const donutData = (Object.keys(statusCounts) as TaskStatus[]).map((status) => ({
-    name: status === 'To Do' ? 'Not started' : status === 'In Progress' ? 'On progress' : status === 'In Review' ? 'On review' : 'Completed',
+    name: status,
     value: statusCounts[status],
     color: chartColors[status] || STATUS_CONFIG[status].color,
   }));
@@ -440,7 +440,7 @@ export const DashboardPage: React.FC = () => {
                             </span>
                           </td>
                           <td className={`py-3 px-2 text-right font-semibold ${statusColors[task.status]}`}>
-                            {task.status === 'To Do' ? 'Not Started' : task.status === 'In Progress' ? 'On progress' : task.status === 'In Review' ? 'On review' : 'Completed'}
+                            {task.status}
                           </td>
                         </tr>
                       );
@@ -503,12 +503,11 @@ export const DashboardPage: React.FC = () => {
               {(Object.keys(statusCounts) as TaskStatus[]).map((status) => {
                 const count = statusCounts[status];
                 const pct = totalTasksCount > 0 ? Math.round((count / totalTasksCount) * 100) : 0;
-                const label = status === 'To Do' ? 'Not started' : status === 'In Progress' ? 'On progress' : status === 'In Review' ? 'On review' : 'Completed';
                 return (
                   <div key={status} className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <span className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: chartColors[status] }} />
-                      <span className="text-slate-500">{label}</span>
+                      <span className="text-slate-500">{status}</span>
                     </div>
                     <span className="text-slate-700 font-bold">{pct}%</span>
                   </div>
