@@ -65,15 +65,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <div className="flex flex-col gap-5 min-h-0 overflow-y-auto pr-0.5 custom-scrollbar">
           {/* Brand Logo & Collapse Toggle */}
           {!isCollapsed ? (
-            <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center justify-between gap-2 w-full">
               <div
                 onClick={() => setCurrentTab('dashboard')}
-                className="flex items-center gap-2 cursor-pointer py-1 px-1 rounded-xl hover:bg-slate-50 transition min-w-0"
+                className="flex-1 flex items-center justify-center cursor-pointer py-1 px-1 rounded-xl hover:bg-slate-50 transition min-w-0"
               >
                 <img
                   src="/logo.png"
                   alt="Deepwoods Logo"
-                  className="h-8 w-auto max-w-[150px] object-contain flex-shrink-0"
+                  className="h-8 w-auto max-w-[150px] object-contain mx-auto"
                 />
               </div>
               <button
@@ -261,16 +261,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
           {user && (
             <div className="flex items-center justify-between gap-2 p-2 rounded-2xl bg-slate-50 border border-slate-200/80">
               {!isCollapsed ? (
-                <div className="flex items-center gap-2.5 min-w-0">
+                <div className="flex items-center gap-2.5 min-w-0 flex-1">
                   <div
                     className="w-8 h-8 rounded-xl flex items-center justify-center text-white text-xs font-extrabold shrink-0 shadow-2xs"
                     style={{ backgroundColor: user.color || '#2563EB' }}
                   >
-                    {user.name.charAt(0).toUpperCase()}
+                    {user.name ? user.name.charAt(0).toUpperCase() : 'U'}
                   </div>
-                  <div className="flex flex-col min-w-0">
-                    <span className="text-xs font-bold text-slate-900 truncate">{user.name}</span>
-                    <span className="text-[9px] font-extrabold text-emerald-700 uppercase tracking-wider">
+                  <div className="flex flex-col min-w-0 flex-1">
+                    <span className="text-[11px] font-bold text-slate-900 truncate" title={user.email}>
+                      {user.email}
+                    </span>
+                    <span className="text-[9px] font-extrabold text-emerald-700 uppercase tracking-wider mt-0.5">
                       {user.role}
                     </span>
                   </div>
@@ -279,16 +281,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 <div
                   className="w-8 h-8 rounded-xl flex items-center justify-center text-white text-xs font-extrabold mx-auto shadow-2xs"
                   style={{ backgroundColor: user.color || '#2563EB' }}
-                  title={`${user.name} (${user.role})`}
+                  title={`${user.email} (${user.role})`}
                 >
-                  {user.name.charAt(0).toUpperCase()}
+                  {user.name ? user.name.charAt(0).toUpperCase() : 'U'}
                 </div>
               )}
 
               {!isCollapsed && (
                 <button
                   onClick={logout}
-                  className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-slate-200/60 rounded-xl transition"
+                  className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-slate-200/60 rounded-xl transition shrink-0"
                   title="Sign Out"
                 >
                   <LogOut className="w-4 h-4" />
