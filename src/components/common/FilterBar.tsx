@@ -155,8 +155,8 @@ export const FilterBar: React.FC<FilterBarProps> = ({ currentTab }) => {
               }
               className="bg-transparent text-slate-800 font-bold focus:outline-none cursor-pointer pr-1"
             >
-              <option value="ALL">Filter by Employee: All ({teamMembers.length})</option>
-              {teamMembers.map((member) => (
+              <option value="ALL">Filter by Employee: All ({teamMembers.filter(m => m.role !== 'Admin').length})</option>
+              {teamMembers.filter(m => m.role !== 'Admin').map((member) => (
                 <option key={member.id} value={member.id}>
                   {member.name} ({member.role || 'Employee'})
                 </option>

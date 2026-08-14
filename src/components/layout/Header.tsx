@@ -349,8 +349,8 @@ export const Header: React.FC<HeaderProps> = ({
                       }
                       className="w-full bg-slate-50 border border-slate-200 text-slate-800 font-bold px-3 py-2 rounded-2xl focus:outline-none focus:border-emerald-500 cursor-pointer"
                     >
-                      <option value="ALL">All Employees / Team Members ({teamMembers.length})</option>
-                      {teamMembers.map((member) => (
+                      <option value="ALL">All Employees / Team Members ({teamMembers.filter(m => m.role !== 'Admin').length})</option>
+                      {teamMembers.filter(m => m.role !== 'Admin').map((member) => (
                         <option key={member.id} value={member.id}>
                           {member.name} ({member.role || 'Employee'})
                         </option>

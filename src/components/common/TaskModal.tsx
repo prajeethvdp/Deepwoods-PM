@@ -42,7 +42,8 @@ export const TaskModal: React.FC<TaskModalProps> = ({
       setTitle('');
       setDescription('');
       setProjectId(selectedProjectId !== 'ALL' ? selectedProjectId : projects[0]?.id || '');
-      setAssigneeId(teamMembers[0]?.id || '');
+      const assignable = teamMembers.filter(m => m.role !== 'Admin');
+      setAssigneeId(assignable[0]?.id || teamMembers[0]?.id || '');
       setAssignorId(user?.id || teamMembers[0]?.id || 'tm-3');
       setPriority('Medium');
       setStatus(defaultStatus);
@@ -180,9 +181,9 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                 onChange={(e) => setAssigneeId(e.target.value)}
                 className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-xs text-slate-900 font-medium focus:bg-white focus:outline-none focus:border-cyan-500"
               >
-                {teamMembers.map((m) => (
+                {teamMembers.filter(m => m.role !== 'Admin').map((m) => (
                   <option key={m.id} value={m.id}>
-                    {m.name} ({m.email})
+                    {m.name} ({m.role || 'Employee'})
                   </option>
                 ))}
               </select>

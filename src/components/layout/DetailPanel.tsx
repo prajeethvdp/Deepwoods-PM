@@ -282,9 +282,9 @@ export const DetailPanel: React.FC = () => {
                   }}
                   className="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 font-medium text-slate-800 focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-75 disabled:bg-slate-100 disabled:cursor-not-allowed"
                 >
-                  {teamMembers.map((m) => (
+                  {teamMembers.filter(m => m.role !== 'Admin').map((m) => (
                     <option key={m.id} value={m.id}>
-                      {m.name} ({m.role})
+                      {m.name} ({m.role || 'Employee'})
                     </option>
                   ))}
                 </select>
