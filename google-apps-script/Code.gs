@@ -187,18 +187,18 @@ function handleSendGmailNotification(payload) {
 
     // Primary: MailApp
     try {
-      MailApp.sendEmail(recipientEmail, subject, '', mailOptions);
+      MailApp.sendEmail(recipientEmail, subject, 'Deepwoods Notification', mailOptions);
       sent = true;
     } catch (e1) {
       Logger.log('MailApp with inlineImages failed, trying GmailApp: ' + e1);
       try {
-        GmailApp.sendEmail(recipientEmail, subject, '', mailOptions);
+        GmailApp.sendEmail(recipientEmail, subject, 'Deepwoods Notification', mailOptions);
         sent = true;
       } catch (e2) {
         Logger.log('GmailApp also failed: ' + e2);
         try {
           // Fallback without inlineImages
-          MailApp.sendEmail(recipientEmail, subject, '', {
+          MailApp.sendEmail(recipientEmail, subject, 'Deepwoods Notification', {
             htmlBody: htmlBody,
             name: 'Green Deepwoods'
           });
