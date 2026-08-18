@@ -115,7 +115,7 @@ export const DetailPanel: React.FC = () => {
     fallbackAdminOrLead?.role ||
     'Admin';
 
-  const assignorColor = assignorMember?.color || fallbackAdminOrLead?.color || '#059669';
+  const assignorColor = assignorMember?.color || fallbackAdminOrLead?.color || '#82C341';
 
   const cleanId = (str: any): string => String(str || '').replace(/[\r\n\t]/g, '').trim();
   const currentProject = projects.find((p) => p.id === projectId);

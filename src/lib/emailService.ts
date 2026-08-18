@@ -47,13 +47,13 @@ export async function sendTaskAssignmentEmail({
         You have been assigned the task <strong>${task.title}</strong> under the <strong>${projectName}</strong> project. Please review the details below and complete the required deliverables prior to the deadline.
       </p>
 
-      <div style="background-color: #f8fafc; border-left: 4px solid #059669; padding: 20px 24px; border-radius: 8px; margin: 24px 0;">
+      <div style="background-color: #f8fafc; border-left: 4px solid #82C341; padding: 20px 24px; border-radius: 8px; margin: 24px 0;">
         <h3 style="margin: 0 0 14px 0; font-size: 16px; font-weight: 700; color: #0f172a;">Task Summary: ${task.title}</h3>
         <ol style="margin: 0; padding-left: 20px; color: #334155; font-size: 14px; line-height: 1.8;">
           <li><strong>Project Name</strong>: ${projectName}</li>
           <li><strong>Priority Level</strong>: ${task.priority}</li>
           <li><strong>Start Date</strong>: ${formattedStartDate}</li>
-          <li><strong>Target Deadline</strong>: <span style="color: #059669; font-weight: 700;">${formattedDueDate}</span></li>
+          <li><strong>Target Deadline</strong>: <span style="color: #82C341; font-weight: 700;">${formattedDueDate}</span></li>
         </ol>
       </div>
 
@@ -121,7 +121,7 @@ export async function sendTaskDeadlineReminderEmail({
         This is a friendly deadline reminder regarding the task <strong>${task.title}</strong> under the <strong>${projectName}</strong> project. Please review the details below and complete the required deliverables prior to the deadline.
       </p>
 
-      <div style="background-color: #f8fafc; border-left: 4px solid #059669; padding: 20px 24px; border-radius: 8px; margin: 24px 0;">
+      <div style="background-color: #f8fafc; border-left: 4px solid #82C341; padding: 20px 24px; border-radius: 8px; margin: 24px 0;">
         <h3 style="margin: 0 0 14px 0; font-size: 16px; font-weight: 700; color: #0f172a;">Task Summary: ${task.title}</h3>
         <ol style="margin: 0; padding-left: 20px; color: #334155; font-size: 14px; line-height: 1.8;">
           <li><strong>Project Name</strong>: ${projectName}</li>

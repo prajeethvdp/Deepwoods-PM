@@ -217,7 +217,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       name: name || normalized.split('@')[0],
       email: normalized,
       role: 'Employee',
-      color: '#10B981',
+      color: '#82C341',
       active: false, // Pending Admin Approval!
     };
 

@@ -4,6 +4,31 @@
 @theme {
   --font-serif: 'Lora', Georgia, serif;
   --font-sans: 'Inter', Helvetica, sans-serif;
+
+  /* Custom Deepwoods Leaf Green Theme (#82C341 / #7CB342) */
+  --color-emerald-50: #f5f9eb;
+  --color-emerald-100: #e8f4d4;
+  --color-emerald-200: #d2e7ab;
+  --color-emerald-300: #b8d97c;
+  --color-emerald-400: #9cc74f;
+  --color-emerald-500: #82c341;
+  --color-emerald-600: #6ca730;
+  --color-emerald-700: #548525;
+  --color-emerald-800: #446922;
+  --color-emerald-900: #3a5820;
+  --color-emerald-950: #1d330c;
+
+  --color-green-50: #f5f9eb;
+  --color-green-100: #e8f4d4;
+  --color-green-200: #d2e7ab;
+  --color-green-300: #b8d97c;
+  --color-green-400: #9cc74f;
+  --color-green-500: #82c341;
+  --color-green-600: #6ca730;
+  --color-green-700: #548525;
+  --color-green-800: #446922;
+  --color-green-900: #3a5820;
+  --color-green-950: #1d330c;
 }
 
 /* Default Body & Content Font */

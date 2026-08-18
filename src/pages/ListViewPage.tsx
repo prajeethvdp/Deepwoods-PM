@@ -260,7 +260,7 @@ export const ListViewPage: React.FC<ListViewPageProps> = ({
                         );
                         const fallbackAdminOrLead = teamMembers.find((m) => m.role === 'Admin' || m.role === 'Product Manager') || teamMembers[0];
                         const assignorName = assignorMember?.name || task.assignorName || (task.assignorEmail?.includes('@') ? task.assignorEmail.split('@')[0] : fallbackAdminOrLead?.name || 'Assignor');
-                        const assignorColor = assignorMember?.color || fallbackAdminOrLead?.color || '#059669';
+                        const assignorColor = assignorMember?.color || fallbackAdminOrLead?.color || '#82C341';
 
                         const isOverdue =
                           task.dueDate &&

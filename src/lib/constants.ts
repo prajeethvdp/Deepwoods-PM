@@ -57,7 +57,7 @@ export const STATUS_CONFIG: Record<TaskStatus, { label: string; color: string; b
   },
   Done: {
     label: 'Done',
-    color: '#10B981',
+    color: '#82C341',
     bg: 'bg-transparent',
     text: 'text-emerald-700 font-bold',
     border: 'border-emerald-300',
