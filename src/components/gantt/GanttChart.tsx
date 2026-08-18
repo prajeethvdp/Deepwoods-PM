@@ -213,7 +213,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({ isMyTasksView = false })
               {daysArray.map((day, index) => {
                 const x = index * dayWidth;
                 const isCurrentDay = isSameDay(day, today);
-                const isWeekend = [0, 6].includes(day.getDay());
+                const isWeekend = day.getDay() === 0; // Saturday is a working day, only Sunday is non-working
 
                 return (
                   <g key={day.toISOString()} transform={`translate(${x}, 0)`}>
@@ -274,7 +274,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({ isMyTasksView = false })
               {/* Draw Vertical Grid Lines */}
               {daysArray.map((day, index) => {
                 const x = leftSidebarWidth + index * dayWidth;
-                const isWeekend = [0, 6].includes(day.getDay());
+                const isWeekend = day.getDay() === 0; // Saturday is a working day, only Sunday is non-working
                 return (
                   <g key={`grid-${index}`}>
                     {isWeekend && (
@@ -445,8 +445,14 @@ export const GanttChart: React.FC<GanttChartProps> = ({ isMyTasksView = false })
 
                               {/* 4. Task Title Text & 5. Percentage Label safely calculated without overlap */}
                               {(() => {
-                                const availWidth = solidWidth - (assignee ? 76 : 50);
-                                const maxChars = Math.floor(availWidth / 7.5);
+                                const avatarOffset = assignee ? 32 : 12;
+                                const isNarrowSolid = solidWidth < (assignee ? 85 : 55);
+
+                                // Determine title availability
+                                const titleStartX = barX + (assignee ? 34 : 14);
+                                const pctEndX = barX + solidWidth - 10;
+                                const availTitleWidth = (isNarrowSolid ? barWidth : solidWidth) - (assignee ? 85 : 55);
+                                const maxChars = Math.floor(availTitleWidth / 7.5);
                                 const showTitle = maxChars >= 3;
                                 const truncatedTitle = showTitle
                                   ? task.title.length > maxChars
@@ -456,11 +462,12 @@ export const GanttChart: React.FC<GanttChartProps> = ({ isMyTasksView = false })
 
                                 return (
                                   <>
+                                    {/* Title Text */}
                                     {showTitle && (
                                       <text
-                                        x={barX + (assignee ? 36 : 14)}
+                                        x={titleStartX}
                                         y={30}
-                                        fill="#FFFFFF"
+                                        fill={isNarrowSolid ? colorScheme.text : '#FFFFFF'}
                                         fontSize={11}
                                         fontWeight="bold"
                                         className="pointer-events-none select-none"
@@ -469,11 +476,12 @@ export const GanttChart: React.FC<GanttChartProps> = ({ isMyTasksView = false })
                                       </text>
                                     )}
 
+                                    {/* Percentage Label */}
                                     <text
-                                      x={barX + solidWidth - 10}
+                                      x={isNarrowSolid ? Math.max(barX + avatarOffset + 4, barX + solidWidth + 6) : pctEndX}
                                       y={30}
-                                      textAnchor="end"
-                                      fill="#FFFFFF"
+                                      textAnchor={isNarrowSolid ? 'start' : 'end'}
+                                      fill={isNarrowSolid ? colorScheme.text : '#FFFFFF'}
                                       fontSize={11}
                                       fontWeight="extrabold"
                                       className="pointer-events-none select-none"
