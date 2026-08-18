@@ -36,21 +36,25 @@ export const NotificationDrawer: React.FC<NotificationDrawerProps> = ({ isOpen, 
     const roleStr = (user.role || '').toLowerCase();
     const isAdmin = roleStr.includes('admin') || roleStr.includes('manager') || roleStr.includes('lead');
 
-    // 1. Admins, PMs, and Workspace Leads see all notifications
+    // 1. Admins, PMs, and Workspace Leads see ALL notifications in the system
     if (isAdmin) return true;
 
     // 2. Direct recipient email match
     const recipientEmail = (n.recipientEmail || '').trim().toLowerCase();
-    if (recipientEmail && userEmail && recipientEmail === userEmail) return true;
+    if (recipientEmail && userEmail && (recipientEmail === userEmail || recipientEmail.split('@')[0] === userEmail.split('@')[0])) {
+      return true;
+    }
 
     // 3. Task role match
     if (n.taskId) {
       const task = tasks.find((t) => t.id === n.taskId);
       if (task) {
         if (n.type === 'COMPLETION') {
+          // Completion notifications go to Assignors
           if (task.assignorId === user.id) return true;
           if (task.assignorEmail && task.assignorEmail.trim().toLowerCase() === userEmail) return true;
         } else {
+          // Assignment and Reminder notifications go to Assignee
           if (task.assigneeId === user.id) return true;
           if (task.assigneeEmail && task.assigneeEmail.trim().toLowerCase() === userEmail) return true;
         }
@@ -72,7 +76,7 @@ export const NotificationDrawer: React.FC<NotificationDrawerProps> = ({ isOpen, 
       <div className="flex-1" onClick={onClose} />
 
       {/* Drawer Panel */}
-      <div className="w-full max-w-md bg-white h-full shadow-2xl flex flex-col border-l border-slate-200 animate-slide-in relative">
+      <div className="w-full max-w-md bg-white h-full shadow-2xl flex flex-col border-l border-slate-200 animate-slide-in relative select-none">
         {/* Header */}
         <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50">
           <div className="flex items-center gap-2.5">
@@ -107,10 +111,10 @@ export const NotificationDrawer: React.FC<NotificationDrawerProps> = ({ isOpen, 
         <div className="flex-1 overflow-y-auto p-4 space-y-3">
           {displayNotifications.length === 0 ? (
             <div className="text-center py-12 px-6">
-              <Mail className="w-10 h-10 text-slate-300 mx-auto mb-3" />
-              <h4 className="text-sm font-semibold text-slate-800 font-serif">No Email Dispatches Yet</h4>
+              <Bell className="w-10 h-10 text-slate-300 mx-auto mb-3" />
+              <h4 className="text-sm font-semibold text-slate-800 font-serif">No Notifications Yet</h4>
               <p className="text-xs text-slate-400 mt-1">
-                Creating or assigning tasks, marking completion, or triggering reminders will log automated email notifications here.
+                You're all caught up! Updates on task assignments, completions, and reminders will appear here.
               </p>
             </div>
           ) : (
@@ -129,7 +133,7 @@ export const NotificationDrawer: React.FC<NotificationDrawerProps> = ({ isOpen, 
                   className={`p-3.5 rounded-xl border transition cursor-pointer text-xs ${
                     notif.read
                       ? 'bg-slate-50 border-slate-200 text-slate-700'
-                      : 'bg-cyan-50/40 border-cyan-200 text-slate-900 shadow-2xs'
+                      : 'bg-emerald-50/50 border-emerald-300 text-slate-900 shadow-2xs'
                   }`}
                 >
                   {/* Top line: Icon, Type Badge, Sent time */}
@@ -163,12 +167,12 @@ export const NotificationDrawer: React.FC<NotificationDrawerProps> = ({ isOpen, 
 
                   {/* Recipient info */}
                   <div className="text-[11px] text-slate-500 mb-2 flex items-center justify-between">
-                    <span>To: <b>{notif.recipientName}</b> ({notif.recipientEmail})</span>
+                    <span>Recipient: <b>{notif.recipientName}</b> ({notif.recipientEmail})</span>
                   </div>
 
                   {/* Footer attachments info */}
                   {notif.attachmentsCount > 0 && (
-                    <div className="pt-2 border-t border-slate-200/60 flex items-center gap-1 text-[10px] text-cyan-700 font-medium">
+                    <div className="pt-2 border-t border-slate-200/60 flex items-center gap-1 text-[10px] text-emerald-700 font-medium">
                       <Paperclip className="w-3 h-3" />
                       <span>{notif.attachmentsCount} Attached Document(s) - Click to View & Download</span>
                     </div>
@@ -179,14 +183,14 @@ export const NotificationDrawer: React.FC<NotificationDrawerProps> = ({ isOpen, 
           )}
         </div>
 
-        {/* Email Preview Modal Overlay */}
+        {/* Notification Preview Modal Overlay */}
         {selectedNotification && (
           <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-20">
             <div className="bg-white rounded-2xl p-5 max-w-md w-full shadow-2xl border border-slate-200 space-y-4 max-h-[85vh] flex flex-col">
               <div className="flex items-center justify-between border-b border-slate-200 pb-3">
                 <div className="flex items-center gap-2">
-                  <Mail className="w-4 h-4 text-cyan-600" />
-                  <span className="font-bold text-slate-900 text-xs uppercase">Email Dispatch Preview</span>
+                  <Bell className="w-4 h-4 text-emerald-600" />
+                  <span className="font-bold text-slate-900 text-xs uppercase">Task Notification Details</span>
                 </div>
                 <button
                   onClick={() => setSelectedNotification(null)}
@@ -204,7 +208,7 @@ export const NotificationDrawer: React.FC<NotificationDrawerProps> = ({ isOpen, 
 
                 <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-100 text-[11px]">
                   <div>
-                    <span className="text-slate-400 block text-[10px] uppercase font-bold">To Recipient</span>
+                    <span className="text-slate-400 block text-[10px] uppercase font-bold">Recipient</span>
                     <span className="text-slate-800 font-semibold">{selectedNotification.recipientName} ({selectedNotification.recipientEmail})</span>
                   </div>
                   <div>
@@ -217,14 +221,14 @@ export const NotificationDrawer: React.FC<NotificationDrawerProps> = ({ isOpen, 
                 {((selectedNotification.attachmentNames && selectedNotification.attachmentNames.length > 0) || taskAttachments.length > 0) && (
                   <div className="pt-2 border-t border-slate-100">
                     <span className="text-slate-400 block text-[10px] uppercase font-bold mb-2 flex items-center gap-1">
-                      <Paperclip className="w-3 h-3 text-cyan-600" /> Attached Documents (Click to Download)
+                      <Paperclip className="w-3 h-3 text-emerald-600" /> Attached Documents (Click to Download)
                     </span>
                     <div className="space-y-1.5">
                       {taskAttachments.length > 0
                         ? taskAttachments.map((att) => (
                             <div key={att.id} className="flex items-center justify-between bg-slate-50 p-2 rounded-lg border border-slate-200 text-xs">
                               <div className="flex items-center gap-2 truncate">
-                                <FileText className="w-4 h-4 text-cyan-600 flex-shrink-0" />
+                                <FileText className="w-4 h-4 text-emerald-600 flex-shrink-0" />
                                 <span className="font-bold text-slate-800 truncate">{att.fileName}</span>
                                 <span className="text-[10px] text-slate-400">({att.fileSize})</span>
                               </div>
@@ -243,7 +247,7 @@ export const NotificationDrawer: React.FC<NotificationDrawerProps> = ({ isOpen, 
                         : (selectedNotification.attachmentNames || []).map((name, i) => (
                             <div key={i} className="flex items-center justify-between bg-slate-50 p-2 rounded-lg border border-slate-200 text-xs">
                               <div className="flex items-center gap-2">
-                                <FileText className="w-4 h-4 text-cyan-600" />
+                                <FileText className="w-4 h-4 text-emerald-600" />
                                 <span className="font-bold text-slate-800">{name}</span>
                               </div>
                             </div>
@@ -252,9 +256,9 @@ export const NotificationDrawer: React.FC<NotificationDrawerProps> = ({ isOpen, 
                   </div>
                 )}
 
-                {/* Styled Email HTML Render */}
+                {/* Styled Notification Content Render */}
                 <div className="pt-3 border-t border-slate-100">
-                  <span className="text-slate-400 block text-[10px] uppercase font-bold mb-2">Trebuchet MS Formatted Email Output</span>
+                  <span className="text-slate-400 block text-[10px] uppercase font-bold mb-2">Notification Summary</span>
                   <div
                     className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs overflow-x-auto max-h-60 text-left"
                     dangerouslySetInnerHTML={{
@@ -269,7 +273,7 @@ export const NotificationDrawer: React.FC<NotificationDrawerProps> = ({ isOpen, 
                   onClick={() => setSelectedNotification(null)}
                   className="px-4 py-2 bg-slate-900 text-white text-xs font-semibold rounded-xl hover:bg-slate-800 transition"
                 >
-                  Close Preview
+                  Close Details
                 </button>
               </div>
             </div>

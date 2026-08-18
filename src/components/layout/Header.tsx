@@ -48,29 +48,35 @@ export const Header: React.FC<HeaderProps> = ({
   const unreadCount = emailNotifications.filter((n) => {
     if (n.read) return false;
     if (!user) return true;
-    const userRoleNorm = (userRole || user.role || '').toLowerCase();
-    const isAdminOrPM = userRoleNorm.includes('admin') || userRoleNorm.includes('manager') || userRoleNorm.includes('lead');
-    const userEmail = user.email.trim().toLowerCase();
 
-    // Admins, PMs, and Workspace Leads see all unread notifications
-    if (isAdminOrPM) return true;
+    const userEmail = (user.email || '').trim().toLowerCase();
+    const roleStr = (userRole || user.role || '').toLowerCase();
+    const isAdmin = roleStr.includes('admin') || roleStr.includes('manager') || roleStr.includes('lead');
 
-    // For non-Admin Employees:
-    if (n.type === 'COMPLETION') {
-      const task = (tasks || []).find((t) => t.id === n.taskId);
-      if (task && (task.assignorId === user.id || (task.assignorEmail && task.assignorEmail.toLowerCase() === userEmail))) {
-        return true;
-      }
-      return false;
-    } else {
-      const recipientEmail = (n.recipientEmail || '').trim().toLowerCase();
-      if (recipientEmail && userEmail && recipientEmail === userEmail) return true;
-      const task = (tasks || []).find((t) => t.id === n.taskId);
-      if (task && (task.assigneeId === user.id || (task.assigneeEmail && task.assigneeEmail.toLowerCase() === userEmail))) {
-        return true;
-      }
-      return false;
+    // 1. Admins, PMs, and Workspace Leads see all unread notifications
+    if (isAdmin) return true;
+
+    // 2. Direct recipient email match
+    const recipientEmail = (n.recipientEmail || '').trim().toLowerCase();
+    if (recipientEmail && userEmail && (recipientEmail === userEmail || recipientEmail.split('@')[0] === userEmail.split('@')[0])) {
+      return true;
     }
+
+    // 3. Task role match
+    if (n.taskId) {
+      const task = (tasks || []).find((t) => t.id === n.taskId);
+      if (task) {
+        if (n.type === 'COMPLETION') {
+          if (task.assignorId === user.id) return true;
+          if (task.assignorEmail && task.assignorEmail.trim().toLowerCase() === userEmail) return true;
+        } else {
+          if (task.assigneeId === user.id) return true;
+          if (task.assigneeEmail && task.assigneeEmail.trim().toLowerCase() === userEmail) return true;
+        }
+      }
+    }
+
+    return false;
   }).length;
 
   // Close popover on outside click
