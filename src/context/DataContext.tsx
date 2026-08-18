@@ -24,6 +24,7 @@ import {
   createCompletionNotification,
   generateDynamicCompanyEmail,
 } from '../lib/emailService';
+import { isTaskAssignedToUser, matchesAssigneeFilter, normalizeRole, findTeamMemberByAssigneeId } from '../lib/permissions';
 import { useAuth } from './AuthContext';
 
 interface DataContextType {
@@ -416,17 +417,12 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const task = tasks.find((t) => t.id === taskId);
     if (!task) return false;
 
-    const assigneeMember = teamMembers.find(
-      (m) =>
-        m.id === task.assigneeId ||
-        (m.email && m.email.trim().toLowerCase() === (task.assigneeEmail || task.assigneeId || '').trim().toLowerCase()) ||
-        (m.name && m.name.trim().toLowerCase() === (task.assigneeId || '').trim().toLowerCase())
-    );
+    const assigneeMember = findTeamMemberByAssigneeId(task.assigneeId, teamMembers, task.assigneeEmail);
 
     const assigneeEmail =
-      task.assigneeEmail ||
       assigneeMember?.email ||
-      (task.assigneeId.includes('@') ? task.assigneeId : '');
+      (task.assigneeEmail && task.assigneeEmail.includes('@') ? task.assigneeEmail : '') ||
+      (task.assigneeId && task.assigneeId.includes('@') ? task.assigneeId : '');
 
     if (!assigneeEmail || !assigneeEmail.includes('@')) {
       alert('Cannot send reminder email: No valid email address found for task assignee.');
@@ -455,6 +451,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       window.dispatchEvent(new Event('deepwoods_notification_updated'));
       window.dispatchEvent(new Event('storage'));
     }
+
+    logActivity(taskId, 'UPDATED', `Sent deadline reminder email to ${assignee.name} (${assignee.email})`);
 
     return true;
   };

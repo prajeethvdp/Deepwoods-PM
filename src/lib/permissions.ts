@@ -100,3 +100,29 @@ export function matchesAssigneeFilter(
 
   return isTaskAssignedToUser(task, targetMember);
 }
+
+/**
+ * Resolves a team member by matching assigneeId, assigneeEmail, or assignee name (with or without role suffixes).
+ */
+export function findTeamMemberByAssigneeId<T extends { id: string; name: string; email: string }>(
+  assigneeId: string | undefined,
+  teamMembers: T[],
+  assigneeEmail?: string
+): T | undefined {
+  if (!assigneeId && !assigneeEmail) return undefined;
+  const cleanId = (assigneeId || '').trim().toLowerCase();
+  const cleanName = cleanId.replace(/\s*\([^)]*\)/g, '').trim();
+  const cleanEmail = (assigneeEmail || '').trim().toLowerCase();
+
+  return teamMembers.find((m) => {
+    const mId = (m.id || '').trim().toLowerCase();
+    const mEmail = (m.email || '').trim().toLowerCase();
+    const mName = (m.name || '').trim().toLowerCase();
+
+    if (cleanId && mId === cleanId) return true;
+    if (cleanEmail && mEmail === cleanEmail) return true;
+    if (cleanId && cleanId.includes('@') && mEmail === cleanId) return true;
+    if (cleanName && mName && (mName === cleanName || cleanName.includes(mName) || mName.includes(cleanName))) return true;
+    return false;
+  });
+}
