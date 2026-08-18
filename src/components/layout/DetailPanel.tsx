@@ -26,6 +26,7 @@ import { Priority, TaskStatus, TaskAttachment } from '../../types';
 import { canDeleteTask, findTeamMemberByAssigneeId } from '../../lib/permissions';
 import { isBefore, startOfDay, formatDistanceToNow, parseISO } from 'date-fns';
 import { toYYYYMMDD, formatDisplayDate } from '../../lib/dateUtils';
+import { sendTaskDeadlineReminderEmail } from '../../lib/emailService';
 
 export const DetailPanel: React.FC = () => {
   const {
@@ -59,6 +60,8 @@ export const DetailPanel: React.FC = () => {
   const [newCommentText, setNewCommentText] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isSendingReminder, setIsSendingReminder] = useState(false);
+  const [reminderSentMessage, setReminderSentMessage] = useState(false);
 
   useEffect(() => {
     if (selectedTask) {
@@ -182,6 +185,33 @@ export const DetailPanel: React.FC = () => {
       ? 'bg-amber-50 text-amber-700 border-amber-200'
       : 'bg-blue-50 text-blue-700 border-blue-200';
 
+  const handleSendDeadlineReminder = async () => {
+    if (!selectedTask || isSendingReminder) return;
+    setIsSendingReminder(true);
+    try {
+      const proj = projects.find((p) => p.id === selectedTask.projectId);
+      const assigneeM = findTeamMemberByAssigneeId(selectedTask.assigneeId, teamMembers, selectedTask.assigneeEmail);
+      const assignorName = selectedTask.assignorName || user?.name || 'Assignor';
+      const assignorEmail = selectedTask.assignorEmail || user?.email || '';
+
+      await sendTaskDeadlineReminderEmail({
+        task: selectedTask,
+        project: proj,
+        assignee: assigneeM,
+        assignorName,
+        assignorEmail,
+        assignorRole: selectedTask.assignorRole || user?.role || 'Admin',
+      });
+
+      setReminderSentMessage(true);
+      setTimeout(() => setReminderSentMessage(false), 3500);
+    } catch (err) {
+      console.warn('Deadline reminder send error:', err);
+    } finally {
+      setIsSendingReminder(false);
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-50 overflow-hidden bg-slate-900/40 backdrop-blur-xs flex justify-end transition-opacity duration-200">
       {/* Backdrop click to close */}
@@ -201,7 +231,23 @@ export const DetailPanel: React.FC = () => {
             </span>
           </div>
 
-          <div className="flex items-center gap-3 shrink-0">
+          <div className="flex items-center gap-2 shrink-0">
+            {!isEmployee && (
+              <button
+                onClick={handleSendDeadlineReminder}
+                disabled={isSendingReminder}
+                className={`flex items-center gap-1.5 text-xs font-bold px-2.5 py-1.5 rounded-none border transition cursor-pointer ${
+                  reminderSentMessage
+                    ? 'bg-emerald-50 text-emerald-700 border-emerald-300'
+                    : 'bg-amber-50 hover:bg-amber-100 text-amber-800 border-amber-300'
+                }`}
+                title="Send Deadline Reminder email to assignee"
+              >
+                <Bell className="w-3.5 h-3.5 text-amber-600" />
+                <span>{reminderSentMessage ? 'Reminder Sent!' : isSendingReminder ? 'Sending...' : 'Deadline Reminder'}</span>
+              </button>
+            )}
+
             {isOverdue && (
               <span className="inline-flex items-center gap-1 bg-white text-rose-600 border border-slate-200 text-[10px] font-extrabold px-2.5 py-1 rounded-none uppercase shrink-0">
                 <AlertCircle className="w-3 h-3 text-rose-600" />

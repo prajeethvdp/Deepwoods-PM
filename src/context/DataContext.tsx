@@ -18,7 +18,9 @@ import {
 } from '../lib/sheets';
 import { isTaskAssignedToUser, matchesAssigneeFilter, normalizeRole, findTeamMemberByAssigneeId } from '../lib/permissions';
 import { useAuth } from './AuthContext';
-import { sendTaskAssignmentEmail } from '../lib/emailService';
+import { sendTaskAssignmentEmail, sendTaskDeadlineReminderEmail } from '../lib/emailService';
+import { isBefore, isSameDay, startOfDay } from 'date-fns';
+import { toYYYYMMDD } from '../lib/dateUtils';
 
 interface DataContextType {
   tasks: Task[];
@@ -297,6 +299,38 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           if (currentSelected) {
             setSelectedTask(currentSelected);
           }
+        }
+
+        // Automated Daily Deadline Reminder Check
+        const todayStr = new Date().toISOString().split('T')[0];
+        const lastAutoCheck = localStorage.getItem('deepwoods_auto_reminder_date');
+        if (lastAutoCheck !== todayStr) {
+          localStorage.setItem('deepwoods_auto_reminder_date', todayStr);
+          const todayObj = startOfDay(new Date());
+
+          sortedTasks.forEach((t) => {
+            if (t.status === 'Done') return;
+            const dueYmd = toYYYYMMDD(t.dueDate);
+            if (!dueYmd) return;
+            const dueObj = startOfDay(new Date(dueYmd));
+            const isDueTodayOrOverdue = isSameDay(dueObj, todayObj) || isBefore(dueObj, todayObj);
+
+            if (isDueTodayOrOverdue) {
+              const proj = (syncedData.projects || projects).find((p) => p.id === t.projectId);
+              const assigneeM = findTeamMemberByAssigneeId(t.assigneeId, (syncedData.teamMembers || teamMembers), t.assigneeEmail);
+              const assignorName = t.assignorName || 'Assignor';
+              const assignorEmail = t.assignorEmail || '';
+
+              sendTaskDeadlineReminderEmail({
+                task: t,
+                project: proj,
+                assignee: assigneeM,
+                assignorName,
+                assignorEmail,
+                assignorRole: t.assignorRole || 'Admin',
+              }).catch((err) => console.warn('[AutoReminder] Skipped:', err));
+            }
+          });
         }
       }
     } finally {
