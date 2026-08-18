@@ -127,7 +127,14 @@ export async function syncAllWithAppsScript(): Promise<{
   if (!scriptUrl) return null;
 
   try {
-    const res = await fetch(`${scriptUrl}?action=getAll&_t=${Date.now()}`);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 6000);
+
+    const res = await fetch(`${scriptUrl}?action=getAll&_t=${Date.now()}`, {
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
+
     if (!res.ok) {
       console.info(`[AppsScript] Sync deferred (HTTP ${res.status}), using local storage cache.`);
       return null;
@@ -148,7 +155,6 @@ export async function syncAllWithAppsScript(): Promise<{
   } catch {
     // Graceful offline fallback to local storage cache
   }
-  return null;
   return null;
 }
 
