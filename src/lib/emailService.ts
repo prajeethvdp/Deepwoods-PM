@@ -27,7 +27,7 @@ export async function sendTaskAssignmentEmail({
     return false;
   }
 
-  const projectName = project?.name || 'Scope 1 & 2 Emissions Inventory';
+  const projectName = project?.name || 'General / Daily Tasks';
   const fullName = assignee?.name || task.assigneeEmail?.split('@')[0] || 'Team Member';
   const assigneeFirstName = fullName.split(' ')[0] || fullName;
   
@@ -103,7 +103,7 @@ export async function sendTaskDeadlineReminderEmail({
     return false;
   }
 
-  const projectName = project?.name || 'Scope 1 & 2 Emissions Inventory';
+  const projectName = project?.name || 'General / Daily Tasks';
   const fullName = assignee?.name || task.assigneeEmail?.split('@')[0] || 'Team Member';
   const assigneeFirstName = fullName.split(' ')[0] || fullName;
   

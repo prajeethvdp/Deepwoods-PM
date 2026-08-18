@@ -41,7 +41,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
     if (isOpen) {
       setTitle('');
       setDescription('');
-      setProjectId(selectedProjectId !== 'ALL' ? selectedProjectId : projects[0]?.id || '');
+      setProjectId(selectedProjectId !== 'ALL' ? selectedProjectId : 'proj-general');
       const assignable = teamMembers.filter((m) => normalizeRole(m.role) === 'Employee');
       setAssigneeId(assignable[0]?.id || teamMembers[0]?.id || '');
       const assignorMembers = teamMembers.filter((m) => {
@@ -171,7 +171,8 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                 onChange={(e) => setProjectId(e.target.value)}
                 className="w-full bg-slate-50 border border-slate-200 rounded-none p-2.5 text-xs text-slate-900 font-medium focus:bg-white focus:outline-none focus:border-emerald-600 cursor-pointer"
               >
-                {projects.map((p) => (
+                <option value="proj-general">General / Daily Tasks</option>
+                {projects.filter((p) => p.id !== 'proj-general').map((p) => (
                   <option key={p.id} value={p.id}>
                     {p.name}
                   </option>

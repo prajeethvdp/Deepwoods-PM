@@ -21,6 +21,7 @@ import { useAuth } from './AuthContext';
 import { sendTaskAssignmentEmail, sendTaskDeadlineReminderEmail } from '../lib/emailService';
 import { isBefore, isSameDay, startOfDay } from 'date-fns';
 import { toYYYYMMDD } from '../lib/dateUtils';
+import { GENERAL_PROJECT } from '../lib/constants';
 
 interface DataContextType {
   tasks: Task[];
@@ -107,7 +108,13 @@ const saveClearedNotificationIds = (set: Set<string>) => {
 
 export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [tasks, setTasks] = useState<Task[]>(() => loadTasksFromStorage());
-  const [projects, setProjects] = useState<Project[]>(() => loadProjectsFromStorage());
+  const [projects, setProjects] = useState<Project[]>(() => {
+    const loaded = loadProjectsFromStorage();
+    if (!loaded.some((p) => p.id === 'proj-general')) {
+      return [GENERAL_PROJECT, ...loaded];
+    }
+    return loaded;
+  });
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>(() => loadTeamFromStorage());
   const [comments, setComments] = useState<TaskComment[]>(() => loadCommentsFromStorage());
   const [activities, setActivities] = useState<TaskActivity[]>(() => loadActivitiesFromStorage());
@@ -266,7 +273,12 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const sortedTasks = sortTasksNewestFirst(mergedTasks);
         setTasks(sortedTasks);
         saveTasksToStorage(sortedTasks);
-        setProjects(syncedData.projects || []);
+        if (syncedData.projects) {
+          const hasGen = syncedData.projects.some((p: any) => p.id === 'proj-general');
+          const mergedProjects = hasGen ? syncedData.projects : [GENERAL_PROJECT, ...syncedData.projects];
+          setProjects(mergedProjects);
+          saveProjectsToStorage(mergedProjects);
+        }
         setTeamMembers(syncedData.teamMembers || []);
 
         // Merge local comments with synced comments to ensure freshly added comments are never lost before GS sync completes

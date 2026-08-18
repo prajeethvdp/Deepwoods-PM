@@ -2,6 +2,17 @@ import { Priority, TaskStatus } from '../types';
 
 export const INITIAL_TEAM_MEMBERS: any[] = [];
 
+export const GENERAL_PROJECT: any = {
+  id: 'proj-general',
+  name: 'General / Daily Tasks',
+  clientName: 'Internal',
+  description: 'General daily tasks and work assignments not tied to a specific project',
+  color: '#82C341',
+  startDate: '',
+  endDate: '',
+  status: 'Active',
+};
+
 export const PRIORITY_CONFIG: Record<Priority, { label: string; color: string; bg: string; text: string; border: string }> = {
   Urgent: {
     label: 'Urgent',

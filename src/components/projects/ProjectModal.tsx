@@ -83,17 +83,6 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({ isOpen, onClose }) =
           </div>
 
           <div>
-            <label className="block font-semibold text-slate-700 mb-1">Client Name</label>
-            <input
-              type="text"
-              value={clientName}
-              onChange={(e) => setClientName(e.target.value)}
-              placeholder="Enter client name..."
-              className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-slate-900 focus:outline-none focus:border-cyan-500"
-            />
-          </div>
-
-          <div>
             <label className="block font-semibold text-slate-700 mb-1">Project Color Badge</label>
             <div className="flex items-center gap-3">
               <input
