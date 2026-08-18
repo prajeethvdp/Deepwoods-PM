@@ -15,24 +15,12 @@ import { Priority, TaskStatus } from '../../types';
 import { PRIORITY_CONFIG, STATUS_CONFIG } from '../../lib/constants';
 import { isTaskAssignedToUser } from '../../lib/permissions';
 import { subDays, startOfMonth, endOfMonth } from 'date-fns';
-import { toYYYYMMDD } from '../../lib/dateUtils';
+import { toYYYYMMDD, getDatePresetOptions } from '../../lib/dateUtils';
 
 interface HeaderProps {
   currentTab: string;
   openNewTaskModal: () => void;
   openNotificationDrawer: () => void;
-}
-
-export function getDatePresetOptions() {
-  return [
-    { key: 'ALL', label: 'Date: All Time' },
-    { key: 'TODAY', label: 'Date: Today' },
-    { key: 'YESTERDAY', label: 'Date: Yesterday' },
-    { key: 'LAST_7_DAYS', label: 'Date: Last 7 Days' },
-    { key: 'LAST_30_DAYS', label: 'Date: Last 30 Days' },
-    { key: 'THIS_MONTH', label: 'Date: This Month' },
-    { key: 'CUSTOM', label: 'Date: Custom Range...' },
-  ];
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -60,28 +48,29 @@ export const Header: React.FC<HeaderProps> = ({
   const unreadCount = emailNotifications.filter((n) => {
     if (n.read) return false;
     if (!user) return true;
-    if ((userRole === 'Admin' || user.role === 'Admin') && n.taskId === 'admin-alert') return true;
+    const userRoleNorm = (userRole || user.role || '').toLowerCase();
+    const isAdminOrPM = userRoleNorm.includes('admin') || userRoleNorm.includes('manager') || userRoleNorm.includes('lead');
     const userEmail = user.email.trim().toLowerCase();
-    const recipientEmail = (n.recipientEmail || '').trim().toLowerCase();
-    const userName = (user.name || '').trim().toLowerCase();
-    const recipientName = (n.recipientName || '').trim().toLowerCase();
 
-    if (recipientEmail && userEmail && recipientEmail === userEmail) return true;
-    if (recipientName && userName && recipientName === userName) return true;
+    // Admins, PMs, and Workspace Leads see all unread notifications
+    if (isAdminOrPM) return true;
 
-    const userPrefix = userEmail.split('@')[0];
-    const recipientPrefix = recipientEmail.split('@')[0];
-    if (userPrefix && recipientPrefix && userPrefix === recipientPrefix) return true;
-
-    if (n.taskId) {
+    // For non-Admin Employees:
+    if (n.type === 'COMPLETION') {
       const task = (tasks || []).find((t) => t.id === n.taskId);
-      if (task) {
-        if (task.assigneeId === user.id) return true;
-        if (task.assigneeEmail && task.assigneeEmail.toLowerCase() === userEmail) return true;
+      if (task && (task.assignorId === user.id || (task.assignorEmail && task.assignorEmail.toLowerCase() === userEmail))) {
+        return true;
       }
+      return false;
+    } else {
+      const recipientEmail = (n.recipientEmail || '').trim().toLowerCase();
+      if (recipientEmail && userEmail && recipientEmail === userEmail) return true;
+      const task = (tasks || []).find((t) => t.id === n.taskId);
+      if (task && (task.assigneeId === user.id || (task.assigneeEmail && task.assigneeEmail.toLowerCase() === userEmail))) {
+        return true;
+      }
+      return false;
     }
-
-    return false;
   }).length;
 
   // Close popover on outside click

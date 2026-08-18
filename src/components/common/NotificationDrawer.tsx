@@ -28,34 +28,32 @@ export const NotificationDrawer: React.FC<NotificationDrawerProps> = ({ isOpen, 
 
   if (!isOpen) return null;
 
-  // Filter notifications for currently logged in user (recipient match)
+  // Filter notifications for currently logged in user
   const displayNotifications = emailNotifications.filter((n) => {
     if (!user) return true;
-    if ((user.role === 'Admin' || user.role?.toLowerCase().includes('admin')) && n.taskId === 'admin-alert') return true;
+    const userRoleNorm = (user.role || '').toLowerCase();
+    const isAdminOrPM = userRoleNorm.includes('admin') || userRoleNorm.includes('manager') || userRoleNorm.includes('lead');
     const userEmail = user.email.trim().toLowerCase();
-    const recipientEmail = (n.recipientEmail || '').trim().toLowerCase();
-    const userName = (user.name || '').trim().toLowerCase();
-    const recipientName = (n.recipientName || '').trim().toLowerCase();
 
-    // 1. Direct recipient match
-    if (recipientEmail && userEmail && recipientEmail === userEmail) return true;
-    if (recipientName && userName && recipientName === userName) return true;
+    // Admins, PMs, and Workspace Leads see all notifications
+    if (isAdminOrPM) return true;
 
-    // 2. Email prefix match (e.g. prajeethv100@gmail.com)
-    const userPrefix = userEmail.split('@')[0];
-    const recipientPrefix = recipientEmail.split('@')[0];
-    if (userPrefix && recipientPrefix && userPrefix === recipientPrefix) return true;
-
-    // 3. Associated task assignee match
-    if (n.taskId) {
+    // For non-Admin Employees:
+    if (n.type === 'COMPLETION') {
       const task = tasks.find((t) => t.id === n.taskId);
-      if (task) {
-        if (task.assigneeId === user.id) return true;
-        if (task.assigneeEmail && task.assigneeEmail.toLowerCase() === userEmail) return true;
+      if (task && (task.assignorId === user.id || (task.assignorEmail && task.assignorEmail.toLowerCase() === userEmail))) {
+        return true;
       }
+      return false;
+    } else {
+      const recipientEmail = (n.recipientEmail || '').trim().toLowerCase();
+      if (recipientEmail && userEmail && recipientEmail === userEmail) return true;
+      const task = tasks.find((t) => t.id === n.taskId);
+      if (task && (task.assigneeId === user.id || (task.assigneeEmail && task.assigneeEmail.toLowerCase() === userEmail))) {
+        return true;
+      }
+      return false;
     }
-
-    return false;
   });
 
   const selectedTaskObj = selectedNotification

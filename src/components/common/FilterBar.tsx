@@ -5,22 +5,10 @@ import { Priority, TaskStatus } from '../../types';
 import { PRIORITY_CONFIG, STATUS_CONFIG } from '../../lib/constants';
 import { useAuth } from '../../context/AuthContext';
 import { subDays, startOfMonth, endOfMonth } from 'date-fns';
-import { toYYYYMMDD } from '../../lib/dateUtils';
+import { toYYYYMMDD, getDatePresetOptions } from '../../lib/dateUtils';
 
 interface FilterBarProps {
   currentTab?: string;
-}
-
-export function getDatePresetOptions() {
-  return [
-    { key: 'ALL', label: 'Date: All Time' },
-    { key: 'TODAY', label: 'Date: Today' },
-    { key: 'YESTERDAY', label: 'Date: Yesterday' },
-    { key: 'LAST_7_DAYS', label: 'Date: Last 7 Days' },
-    { key: 'LAST_30_DAYS', label: 'Date: Last 30 Days' },
-    { key: 'THIS_MONTH', label: 'Date: This Month' },
-    { key: 'CUSTOM', label: 'Date: Custom Range...' },
-  ];
 }
 
 export const FilterBar: React.FC<FilterBarProps> = ({ currentTab }) => {

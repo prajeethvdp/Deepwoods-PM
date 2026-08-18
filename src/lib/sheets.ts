@@ -4,6 +4,7 @@ const TASKS_STORAGE_KEY = 'deepwoods_tasks';
 const PROJECTS_STORAGE_KEY = 'deepwoods_projects';
 const TEAM_STORAGE_KEY = 'deepwoods_team';
 const COMMENTS_STORAGE_KEY = 'deepwoods_comments';
+const ACTIVITIES_STORAGE_KEY = 'deepwoods_activities';
 
 // Read configuration strictly from environment variables
 export const getSheetsConfig = (): SheetsConfig => {
@@ -33,6 +34,9 @@ export const initializeLocalStorage = (): void => {
   }
   if (localStorage.getItem(COMMENTS_STORAGE_KEY) === null) {
     localStorage.setItem(COMMENTS_STORAGE_KEY, JSON.stringify([]));
+  }
+  if (localStorage.getItem(ACTIVITIES_STORAGE_KEY) === null) {
+    localStorage.setItem(ACTIVITIES_STORAGE_KEY, JSON.stringify([]));
   }
 };
 
@@ -88,6 +92,15 @@ export const loadCommentsFromStorage = (): TaskComment[] => {
 
 export const saveCommentsToStorage = (comments: TaskComment[]): void => {
   localStorage.setItem(COMMENTS_STORAGE_KEY, JSON.stringify(comments));
+};
+
+export const loadActivitiesFromStorage = (): any[] => {
+  const saved = localStorage.getItem(ACTIVITIES_STORAGE_KEY);
+  return saved ? JSON.parse(saved) : [];
+};
+
+export const saveActivitiesToStorage = (activities: any[]): void => {
+  localStorage.setItem(ACTIVITIES_STORAGE_KEY, JSON.stringify(activities));
 };
 
 /**

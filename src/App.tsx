@@ -17,6 +17,8 @@ import { CommandPalette } from './components/common/CommandPalette';
 import { NotificationDrawer } from './components/common/NotificationDrawer';
 import { TaskStatus } from './types';
 
+import { BulkActionBar } from './components/common/BulkActionBar';
+
 const MainApp: React.FC = () => {
   const { isAuthenticated } = useAuth();
   const { setSelectedProjectId } = useData();
@@ -138,6 +140,8 @@ const MainApp: React.FC = () => {
         isOpen={isProjectModalOpen}
         onClose={() => setIsProjectModalOpen(false)}
       />
+      {/* Floating Bulk Action Bar */}
+      <BulkActionBar />
     </div>
   );
 };

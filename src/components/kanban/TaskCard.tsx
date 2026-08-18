@@ -26,7 +26,8 @@ const getPriorityStyle = (priority: string): { bg: string; text: string; border:
 };
 
 export const TaskCard: React.FC<TaskCardProps> = ({ task }) => {
-  const { openTaskDetail, projects, teamMembers, comments } = useData();
+  const { openTaskDetail, projects, teamMembers, comments, selectedTaskIds, toggleSelectTask } = useData();
+  const isSelected = selectedTaskIds.includes(task.id);
 
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: task.id,
@@ -48,28 +49,37 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task }) => {
   let daysLabel = '';
   let isOverdue = false;
   if (task.dueDate) {
-    try {
-      const due = startOfDay(parseISO(task.dueDate));
-      const diff = differenceInDays(due, today);
-      if (task.status === 'Done') {
-        daysLabel = 'Done';
-      } else if (diff < 0) {
-        daysLabel = `${Math.abs(diff)}d overdue`;
-        isOverdue = true;
-      } else if (diff === 0) {
-        daysLabel = 'Due today';
-      } else {
-        daysLabel = `${diff}d left`;
-      }
-    } catch {
+    const due = parseISO(task.dueDate);
+    const diff = differenceInDays(due, today);
+    if (diff < 0) {
+      daysLabel = `${Math.abs(diff)}d overdue`;
+      isOverdue = true;
+    } else if (diff === 0) {
+      daysLabel = 'Due today';
+    } else if (diff === 1) {
+      daysLabel = '1d left';
+    } else {
+      daysLabel = `${diff}d left`;
+    }
+  } else if (task.startDate) {
+    const start = parseISO(task.startDate);
+    const diff = differenceInDays(start, today);
+    if (diff === 0) {
+      daysLabel = 'Starts today';
+    } else if (diff > 0) {
+      daysLabel = `Starts in ${diff}d`;
+    } else {
       daysLabel = '';
     }
   }
 
   const attachCount = task.attachments?.length || 0;
   const commentCount = comments.filter((c) => c.taskId === task.id).length;
-  const subtaskCount = task.subtasks?.length || 0;
-  const completedSubtasks = task.subtasks?.filter((s) => s.completed).length || 0;
+
+  const handleCheckboxClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    toggleSelectTask(task.id);
+  };
 
   return (
     <div
@@ -78,21 +88,37 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task }) => {
       {...attributes}
       {...listeners}
       onClick={() => openTaskDetail(task)}
-      className="bg-white rounded-none p-3.5 border border-slate-200/60 shadow-xs hover:shadow-sm transition-all duration-150 cursor-pointer select-none group"
+      className={`rounded-none p-3.5 border transition-all duration-150 cursor-pointer select-none group relative ${
+        isSelected
+          ? 'bg-emerald-50/40 ring-2 ring-emerald-500 border-emerald-500 shadow-sm'
+          : 'bg-white border-slate-200/60 shadow-xs hover:shadow-sm'
+      }`}
     >
-      {/* Row 1: Avatar (top-left) + Days (top-right) */}
+      {/* Row 1: Checkbox + Avatar (top-left) + Days (top-right) */}
       <div className="flex items-center justify-between mb-2.5">
-        {assignee ? (
-          <div
-            className="w-6 h-6 rounded-full flex items-center justify-center text-white text-[10px] font-bold border-2 border-white shadow-xs flex-shrink-0"
-            style={{ backgroundColor: assignee.color }}
-            title={assignee.name}
-          >
-            {assignee.name.charAt(0)}
-          </div>
-        ) : (
-          <div className="w-6 h-6 rounded-full bg-slate-100 flex-shrink-0" />
-        )}
+        <div className="flex items-center gap-2">
+          <input
+            type="checkbox"
+            checked={isSelected}
+            onClick={handleCheckboxClick}
+            onChange={() => {}}
+            className="w-3.5 h-3.5 rounded-none text-emerald-600 border-slate-300 focus:ring-0 cursor-pointer opacity-70 group-hover:opacity-100 transition"
+            title="Select Task for Bulk Action"
+          />
+          {assignee ? (
+            <div
+              className="w-6 h-6 rounded-full flex items-center justify-center text-white text-[10px] font-bold border-2 border-white shadow-xs flex-shrink-0"
+              style={{ backgroundColor: assignee.color }}
+              title={assignee.name}
+            >
+              {assignee.name.split(' ').map((n) => n[0]).join('').substring(0, 2)}
+            </div>
+          ) : (
+            <div className="w-6 h-6 rounded-full bg-slate-200 text-slate-500 text-[10px] font-bold flex items-center justify-center flex-shrink-0">
+              ?
+            </div>
+          )}
+        </div>
 
         {daysLabel && (
           <span className={`flex items-center gap-1 text-[10px] font-semibold ${
@@ -114,25 +140,6 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task }) => {
         <p className="text-[11px] text-slate-500 leading-relaxed mb-2.5 line-clamp-2">
           {task.description}
         </p>
-      )}
-
-      {/* Subtask progress bar */}
-      {subtaskCount > 0 && (
-        <div className="mb-2.5">
-          <div className="flex items-center justify-between text-[10px] text-slate-400 mb-1">
-            <span className="flex items-center gap-1">
-              <CheckSquare className="w-3 h-3 text-cyan-500" />
-              {completedSubtasks}/{subtaskCount} subtasks
-            </span>
-            <span>{Math.round((completedSubtasks / subtaskCount) * 100)}%</span>
-          </div>
-          <div className="w-full h-1 bg-slate-100 rounded-full overflow-hidden">
-            <div
-              className="h-full bg-cyan-500 rounded-full"
-              style={{ width: `${(completedSubtasks / subtaskCount) * 100}%` }}
-            />
-          </div>
-        </div>
       )}
 
       {/* Project indicator */}

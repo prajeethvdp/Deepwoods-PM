@@ -1,12 +1,6 @@
 export type Priority = 'Low' | 'Medium' | 'High' | 'Urgent';
 export type TaskStatus = 'To Do' | 'In Progress' | 'In Review' | 'Done';
 
-export interface SubTask {
-  id: string;
-  title: string;
-  completed: boolean;
-}
-
 export interface TaskAttachment {
   id: string;
   fileName: string;
@@ -33,9 +27,19 @@ export interface Task {
   createdAt: string;
   updatedAt: string;
   completedAt?: string;
-  subtasks?: SubTask[];
   storyPoints?: number;
   attachments?: TaskAttachment[];
+}
+
+export interface TaskActivity {
+  id: string;
+  taskId: string;
+  userId: string;
+  userName: string;
+  userColor?: string;
+  actionType: 'STATUS_CHANGE' | 'PRIORITY_CHANGE' | 'REASSIGNED' | 'DUE_DATE_CHANGE' | 'UPDATED' | 'COMMENT_ADDED' | 'ATTACHMENT_ADDED' | 'CREATED';
+  details: string;
+  timestamp: string; // ISO string
 }
 
 export interface Project {
@@ -75,14 +79,26 @@ export interface DocNote {
   title: string;
   content: string;
   projectId?: string;
-  authorId: string;
+  authorId?: string;
   createdAt: string;
   updatedAt: string;
 }
 
+export interface FilterOptions {
+  searchQuery: string;
+  projectId: string;
+  assigneeId: string;
+  priority: string;
+  status: string;
+  myTasksOnly: boolean;
+  datePreset?: string;
+  startDate?: string;
+  endDate?: string;
+}
+
 export interface EmailNotification {
   id: string;
-  type: 'ASSIGNMENT' | 'REMINDER' | 'COMPLETION';
+  type: 'ASSIGNMENT' | 'REMINDER' | 'STATUS_CHANGE' | 'COMPLETION';
   taskId: string;
   taskTitle: string;
   recipientEmail: string;
@@ -91,29 +107,19 @@ export interface EmailNotification {
   subject: string;
   body: string;
   attachmentsCount: number;
-  attachmentNames?: string[];
+  attachmentNames: string[];
   sentAt: string;
   read: boolean;
-  status: 'SENT' | 'PENDING';
-}
-
-export interface FilterOptions {
-  searchQuery: string;
-  projectId: string;
-  assigneeId: string;
-  priority: Priority | 'All';
-  status: TaskStatus | 'All';
-  myTasksOnly: boolean;
-  datePreset: string; // 'ALL' | 'TODAY' | 'YESTERDAY' | 'LAST_7_DAYS' | 'LAST_30_DAYS' | 'THIS_MONTH' | 'CUSTOM'
-  startDate?: string;
-  endDate?: string;
+  status: 'SENT' | 'FAILED' | 'PENDING';
 }
 
 export interface SheetsConfig {
-  spreadsheetId: string;
-  clientId: string;
-  apiKey: string;
-  useGoogleSheets: boolean;
-  autoSync: boolean;
-  lastSyncedAt?: string;
+  webAppUrl?: string;
+  spreadSheetId?: string;
+  spreadsheetId?: string;
+  clientId?: string;
+  apiKey?: string;
+  useGoogleSheets?: boolean;
+  autoSync?: boolean;
+  isConfigured?: boolean;
 }

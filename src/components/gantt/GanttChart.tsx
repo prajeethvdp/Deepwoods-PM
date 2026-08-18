@@ -127,10 +127,6 @@ export const GanttChart: React.FC<GanttChartProps> = ({ isMyTasksView = false })
   // Helper to calculate progress percentage
   const getTaskProgress = (task: Task): number => {
     if (task.status === 'Done') return 100;
-    if (task.subtasks && task.subtasks.length > 0) {
-      const completedCount = task.subtasks.filter((s) => s.completed).length;
-      return Math.round((completedCount / task.subtasks.length) * 100);
-    }
     if (task.status === 'In Review') return 80;
     if (task.status === 'In Progress') return 55;
     return 20; // To Do

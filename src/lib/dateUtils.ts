@@ -2,11 +2,6 @@ import { parseISO, format, isValid } from 'date-fns';
 
 /**
  * Converts any date representation into strict YYYY-MM-DD string format for <input type="date">
- * Handles:
- * - "Wed Aug 12 2026 00:00:00 GMT+0530 (India Standard Time)"
- * - "2026-08-12T00:00:00.000Z"
- * - "2026-08-12"
- * - Date objects
  */
 export function toYYYYMMDD(input: any): string {
   if (!input) return '';
@@ -85,4 +80,16 @@ export function formatDateRangeDisplay(startInput: any, dueInput: any): string {
   }
 
   return 'No Dates Set';
+}
+
+export function getDatePresetOptions() {
+  return [
+    { key: 'ALL', label: 'Date: All Time' },
+    { key: 'TODAY', label: 'Date: Today' },
+    { key: 'YESTERDAY', label: 'Date: Yesterday' },
+    { key: 'LAST_7_DAYS', label: 'Date: Last 7 Days' },
+    { key: 'LAST_30_DAYS', label: 'Date: Last 30 Days' },
+    { key: 'THIS_MONTH', label: 'Date: This Month' },
+    { key: 'CUSTOM', label: 'Date: Custom Range...' },
+  ];
 }

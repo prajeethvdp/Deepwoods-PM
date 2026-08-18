@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { Task, Project, TeamMember, TaskComment, FilterOptions, SheetsConfig, TaskStatus, EmailNotification, TaskAttachment } from '../types';
+import { Task, Project, TeamMember, TaskComment, FilterOptions, SheetsConfig, TaskStatus, EmailNotification, TaskAttachment, TaskActivity } from '../types';
 import {
   loadTasksFromStorage,
   saveTasksToStorage,
@@ -9,6 +9,8 @@ import {
   saveTeamToStorage,
   loadCommentsFromStorage,
   saveCommentsToStorage,
+  loadActivitiesFromStorage,
+  saveActivitiesToStorage,
   getSheetsConfig,
   syncAllWithAppsScript,
   sendAppsScriptAction,
@@ -28,10 +30,12 @@ interface DataContextType {
   projects: Project[];
   teamMembers: TeamMember[];
   comments: TaskComment[];
+  activities: TaskActivity[];
   emailNotifications: EmailNotification[];
   filterOptions: FilterOptions;
   selectedProjectId: string;
   selectedTask: Task | null;
+  selectedTaskIds: string[];
   isDetailPanelOpen: boolean;
   sheetsConfig: SheetsConfig;
   isSyncing: boolean;
@@ -39,6 +43,10 @@ interface DataContextType {
   // Actions
   setSelectedProjectId: (id: string) => void;
   setSelectedTask: (task: Task | null) => void;
+  setSelectedTaskIds: React.Dispatch<React.SetStateAction<string[]>>;
+  toggleSelectTask: (taskId: string) => void;
+  selectAllTasks: (taskIds: string[]) => void;
+  clearTaskSelection: () => void;
   openTaskDetail: (task: Task) => void;
   closeTaskDetail: () => void;
   setFilterOptions: React.Dispatch<React.SetStateAction<FilterOptions>>;
@@ -52,11 +60,14 @@ interface DataContextType {
   addAttachmentToTask: (taskId: string, attachment: TaskAttachment) => Promise<void>;
   removeAttachmentFromTask: (taskId: string, attachmentId: string) => Promise<void>;
   
-  // Task CRUD
+  // Task CRUD & Bulk
   createTask: (taskData: Omit<Task, 'id' | 'createdAt' | 'updatedAt'>) => Promise<Task>;
   updateTask: (taskId: string, updates: Partial<Task>) => Promise<Task | null>;
   updateTaskStatus: (taskId: string, newStatus: TaskStatus) => Promise<void>;
   deleteTask: (taskId: string) => Promise<boolean>;
+  bulkUpdateTasks: (taskIds: string[], updates: Partial<Task>) => Promise<void>;
+  bulkDeleteTasks: (taskIds: string[]) => Promise<void>;
+  logActivity: (taskId: string, actionType: TaskActivity['actionType'], details: string, userOverride?: TeamMember) => void;
   
   // Project CRUD
   createProject: (projData: Omit<Project, 'id' | 'createdAt'>) => Promise<Project>;
@@ -110,6 +121,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>(() => loadTeamFromStorage());
   const [comments, setComments] = useState<TaskComment[]>(() => loadCommentsFromStorage());
   const [emailNotifications, setEmailNotifications] = useState<EmailNotification[]>(() => loadEmailNotifications());
+  const [activities, setActivities] = useState<TaskActivity[]>(() => loadActivitiesFromStorage());
+  const [selectedTaskIds, setSelectedTaskIds] = useState<string[]>([]);
   
   const [selectedProjectId, setSelectedProjectId] = useState<string>('ALL');
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
@@ -118,7 +131,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [sheetsConfig] = useState<SheetsConfig>(() => getSheetsConfig());
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
 
-  const { refreshUser } = useAuth();
+  const { user: currentUser, refreshUser } = useAuth();
 
   // Sync state changes to local storage
   useEffect(() => {
@@ -137,6 +150,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     saveCommentsToStorage(comments);
   }, [comments]);
+
+  useEffect(() => {
+    saveActivitiesToStorage(activities);
+  }, [activities]);
 
   useEffect(() => {
     saveEmailNotifications(emailNotifications);
@@ -292,6 +309,54 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return prevNotifs;
     });
   }, [tasks, teamMembers, projects]);
+
+  const logActivity = (
+    taskId: string,
+    actionType: TaskActivity['actionType'],
+    details: string,
+    userOverride?: TeamMember
+  ) => {
+    const activeUser = userOverride || currentUser;
+    const newActivity: TaskActivity = {
+      id: `act-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+      taskId,
+      userId: activeUser?.id || 'sys-1',
+      userName: activeUser?.name || 'System / Admin',
+      userColor: activeUser?.color || '#059669',
+      actionType,
+      details,
+      timestamp: new Date().toISOString(),
+    };
+    setActivities((prev) => [newActivity, ...prev]);
+  };
+
+  const toggleSelectTask = (taskId: string) => {
+    setSelectedTaskIds((prev) =>
+      prev.includes(taskId) ? prev.filter((id) => id !== taskId) : [...prev, taskId]
+    );
+  };
+
+  const selectAllTasks = (taskIds: string[]) => {
+    setSelectedTaskIds(taskIds);
+  };
+
+  const clearTaskSelection = () => {
+    setSelectedTaskIds([]);
+  };
+
+  const bulkUpdateTasks = async (taskIds: string[], updates: Partial<Task>): Promise<void> => {
+    if (taskIds.length === 0) return;
+    for (const id of taskIds) {
+      await updateTask(id, updates);
+    }
+    setSelectedTaskIds([]);
+  };
+
+  const bulkDeleteTasks = async (taskIds: string[]): Promise<void> => {
+    if (taskIds.length === 0) return;
+    setTasks((prev) => prev.filter((t) => !taskIds.includes(t.id)));
+    setSelectedTaskIds([]);
+  };
 
   const openTaskDetail = (task: Task) => {
     setSelectedTask(task);
@@ -456,6 +521,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Sync to Google Apps Script / Sheets
     sendAppsScriptAction('createTask', { data: newTask });
 
+    logActivity(newTask.id, 'CREATED', `Created task "${newTask.title}"`);
+
     return newTask;
   };
 
@@ -463,6 +530,23 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     let updatedTask: Task | null = null;
     let isNewlyCompleted = false;
     let completedDateStr = '';
+
+    const existingTask = tasks.find((t) => t.id === taskId);
+    if (existingTask) {
+      if (updates.status && updates.status !== existingTask.status) {
+        logActivity(taskId, 'STATUS_CHANGE', `Changed status from "${existingTask.status}" to "${updates.status}"`);
+      }
+      if (updates.priority && updates.priority !== existingTask.priority) {
+        logActivity(taskId, 'PRIORITY_CHANGE', `Changed priority from "${existingTask.priority}" to "${updates.priority}"`);
+      }
+      if (updates.assigneeId && updates.assigneeId !== existingTask.assigneeId) {
+        const newM = teamMembers.find((m) => m.id === updates.assigneeId);
+        logActivity(taskId, 'REASSIGNED', `Reassigned task to ${newM?.name || updates.assigneeId}`);
+      }
+      if (updates.dueDate && updates.dueDate !== existingTask.dueDate) {
+        logActivity(taskId, 'DUE_DATE_CHANGE', `Updated target deadline to ${updates.dueDate}`);
+      }
+    }
 
     const updatedTasks = tasks.map((t) => {
       if (t.id === taskId) {
@@ -529,7 +613,16 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         completedDateStr,
         project
       );
-      setEmailNotifications((prev) => [completionEmail, ...prev]);
+      setEmailNotifications((prev) => {
+        const next = [completionEmail, ...prev];
+        saveEmailNotifications(next);
+        return next;
+      });
+
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event('deepwoods_notification_updated'));
+        window.dispatchEvent(new Event('storage'));
+      }
     }
 
     if (updatedTask) {
@@ -645,6 +738,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       createdAt: new Date().toISOString(),
     };
     setComments((prev) => [...prev, newComment]);
+    logActivity(taskId, 'COMMENT_ADDED', `Posted comment: "${text.length > 50 ? text.substring(0, 50) + '...' : text}"`);
     sendAppsScriptAction('addComment', { data: newComment });
     return newComment;
   };
@@ -656,15 +750,21 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         projects,
         teamMembers,
         comments,
+        activities,
         emailNotifications,
         filterOptions,
         selectedProjectId,
         selectedTask,
+        selectedTaskIds,
         isDetailPanelOpen,
         sheetsConfig,
         isSyncing,
         setSelectedProjectId,
         setSelectedTask,
+        setSelectedTaskIds,
+        toggleSelectTask,
+        selectAllTasks,
+        clearTaskSelection,
         openTaskDetail,
         closeTaskDetail,
         setFilterOptions,
@@ -677,6 +777,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         updateTask,
         updateTaskStatus,
         deleteTask,
+        bulkUpdateTasks,
+        bulkDeleteTasks,
+        logActivity,
         createProject,
         updateProject,
         deleteProject,

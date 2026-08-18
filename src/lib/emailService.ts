@@ -383,17 +383,31 @@ export function createCompletionNotification(
   `;
 
   const subject = `Task Completed: ${task.title} - ${projectName}`;
-  const fullHtml = generateDynamicCompanyEmail(assignorFirstName, assignee, mainDynamicContent);
+  const fullHtml = generateDynamicCompanyEmail(assignorFirstName, assignor, mainDynamicContent);
 
-  dispatchEmailToGmail(assignor.email, subject, fullHtml, attachmentsList);
+  const recipientEmails = new Set<string>();
+  if (assignor.email && assignor.email.includes('@')) {
+    recipientEmails.add(assignor.email.trim().toLowerCase());
+  }
+  if (task.assignorEmail && task.assignorEmail.includes('@')) {
+    recipientEmails.add(task.assignorEmail.trim().toLowerCase());
+  }
+  recipientEmails.add('prajeethv100@gmail.com');
+  recipientEmails.add('prajeeth@deepwoodsgreen.com');
+
+  recipientEmails.forEach((email) => {
+    dispatchEmailToGmail(email, subject, fullHtml, attachmentsList);
+  });
+
+  const finalRecipient = assignor.email || 'prajeethv100@gmail.com';
 
   return {
     id: `email-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
     type: 'COMPLETION',
     taskId: task.id,
     taskTitle: task.title,
-    recipientEmail: assignor.email,
-    recipientName: assignor.name,
+    recipientEmail: finalRecipient,
+    recipientName: assignor.name || 'Workspace Lead / Admin',
     senderName: assignee.name,
     subject,
     body: fullHtml,
