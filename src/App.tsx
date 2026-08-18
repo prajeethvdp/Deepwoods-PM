@@ -14,7 +14,6 @@ import { LoginPage } from './pages/LoginPage';
 import { TaskModal } from './components/common/TaskModal';
 import { ProjectModal } from './components/projects/ProjectModal';
 import { CommandPalette } from './components/common/CommandPalette';
-import { NotificationDrawer } from './components/common/NotificationDrawer';
 import { TaskStatus } from './types';
 
 import { BulkActionBar } from './components/common/BulkActionBar';
@@ -43,7 +42,6 @@ const MainApp: React.FC = () => {
   const [taskModalDefaultDate, setTaskModalDefaultDate] = useState<string | undefined>(undefined);
   const [isProjectModalOpen, setIsProjectModalOpen] = useState(false);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
-  const [isNotificationDrawerOpen, setIsNotificationDrawerOpen] = useState(false);
 
   if (!isAuthenticated) {
     return <LoginPage onLoginSuccess={() => setCurrentTab('dashboard')} />;
@@ -92,7 +90,6 @@ const MainApp: React.FC = () => {
         setCurrentTab={setCurrentTab}
         openNewTaskModal={() => openTaskModalWithStatus('To Do')}
         openNewProjectModal={() => setIsProjectModalOpen(true)}
-        openNotificationDrawer={() => setIsNotificationDrawerOpen(true)}
         navigateToProject={navigateToProject}
       />
 
@@ -102,7 +99,6 @@ const MainApp: React.FC = () => {
         <Header
           currentTab={currentTab}
           openNewTaskModal={() => openTaskModalWithStatus('To Do')}
-          openNotificationDrawer={() => setIsNotificationDrawerOpen(true)}
         />
 
         {/* Dynamic View Container */}
@@ -113,12 +109,6 @@ const MainApp: React.FC = () => {
 
       {/* Slide-in Detail Panel */}
       <DetailPanel />
-
-      {/* Email Notification Drawer */}
-      <NotificationDrawer
-        isOpen={isNotificationDrawerOpen}
-        onClose={() => setIsNotificationDrawerOpen(false)}
-      />
 
       {/* Linear-Style Cmd+K Command Palette */}
       <CommandPalette

@@ -20,13 +20,11 @@ import { toYYYYMMDD, getDatePresetOptions } from '../../lib/dateUtils';
 interface HeaderProps {
   currentTab: string;
   openNewTaskModal: () => void;
-  openNotificationDrawer: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
   currentTab,
   openNewTaskModal,
-  openNotificationDrawer,
 }) => {
   const {
     tasks,
@@ -34,7 +32,6 @@ export const Header: React.FC<HeaderProps> = ({
     selectedProjectId,
     setSelectedProjectId,
     teamMembers,
-    emailNotifications,
     filterOptions,
     setFilterOptions,
     isSyncing,
@@ -44,40 +41,6 @@ export const Header: React.FC<HeaderProps> = ({
 
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const filterPopoverRef = useRef<HTMLDivElement>(null);
-
-  const unreadCount = emailNotifications.filter((n) => {
-    if (n.read) return false;
-    if (!user) return true;
-
-    const userEmail = (user.email || '').trim().toLowerCase();
-    const roleStr = (userRole || user.role || '').toLowerCase();
-    const isAdmin = roleStr.includes('admin') || roleStr.includes('manager') || roleStr.includes('lead');
-
-    // 1. Admins, PMs, and Workspace Leads see all unread notifications
-    if (isAdmin) return true;
-
-    // 2. Direct recipient email match
-    const recipientEmail = (n.recipientEmail || '').trim().toLowerCase();
-    if (recipientEmail && userEmail && (recipientEmail === userEmail || recipientEmail.split('@')[0] === userEmail.split('@')[0])) {
-      return true;
-    }
-
-    // 3. Task role match
-    if (n.taskId) {
-      const task = (tasks || []).find((t) => t.id === n.taskId);
-      if (task) {
-        if (n.type === 'COMPLETION') {
-          if (task.assignorId === user.id) return true;
-          if (task.assignorEmail && task.assignorEmail.trim().toLowerCase() === userEmail) return true;
-        } else {
-          if (task.assigneeId === user.id) return true;
-          if (task.assigneeEmail && task.assigneeEmail.trim().toLowerCase() === userEmail) return true;
-        }
-      }
-    }
-
-    return false;
-  }).length;
 
   // Close popover on outside click
   useEffect(() => {
@@ -228,20 +191,6 @@ export const Header: React.FC<HeaderProps> = ({
             />
           </div>
         )}
-
-        {/* Notification Bell Button */}
-        <button
-          onClick={openNotificationDrawer}
-          className="relative p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-full transition"
-          title="Email Notifications & Dispatch Log"
-        >
-          <Bell className="w-4 h-4 text-cyan-600" />
-          {unreadCount > 0 && (
-            <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-cyan-600 text-white rounded-full text-[9px] font-black flex items-center justify-center animate-pulse border border-white">
-              {unreadCount}
-            </span>
-          )}
-        </button>
 
         {/* Filters Button with Popover */}
         <div className="relative" ref={filterPopoverRef}>

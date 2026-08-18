@@ -25,7 +25,6 @@ interface SidebarProps {
   setCurrentTab: (tab: string) => void;
   openNewTaskModal: () => void;
   openNewProjectModal: () => void;
-  openNotificationDrawer?: () => void;
   navigateToProject: (projectId: string) => void;
 }
 
