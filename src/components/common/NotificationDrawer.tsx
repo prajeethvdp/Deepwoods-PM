@@ -31,29 +31,33 @@ export const NotificationDrawer: React.FC<NotificationDrawerProps> = ({ isOpen, 
   // Filter notifications for currently logged in user
   const displayNotifications = emailNotifications.filter((n) => {
     if (!user) return true;
-    const userRoleNorm = (user.role || '').toLowerCase();
-    const isAdminOrPM = userRoleNorm.includes('admin') || userRoleNorm.includes('manager') || userRoleNorm.includes('lead');
-    const userEmail = user.email.trim().toLowerCase();
 
-    // Admins, PMs, and Workspace Leads see all notifications
-    if (isAdminOrPM) return true;
+    const userEmail = (user.email || '').trim().toLowerCase();
+    const roleStr = (user.role || '').toLowerCase();
+    const isAdmin = roleStr.includes('admin') || roleStr.includes('manager') || roleStr.includes('lead');
 
-    // For non-Admin Employees:
-    if (n.type === 'COMPLETION') {
+    // 1. Admins, PMs, and Workspace Leads see all notifications
+    if (isAdmin) return true;
+
+    // 2. Direct recipient email match
+    const recipientEmail = (n.recipientEmail || '').trim().toLowerCase();
+    if (recipientEmail && userEmail && recipientEmail === userEmail) return true;
+
+    // 3. Task role match
+    if (n.taskId) {
       const task = tasks.find((t) => t.id === n.taskId);
-      if (task && (task.assignorId === user.id || (task.assignorEmail && task.assignorEmail.toLowerCase() === userEmail))) {
-        return true;
+      if (task) {
+        if (n.type === 'COMPLETION') {
+          if (task.assignorId === user.id) return true;
+          if (task.assignorEmail && task.assignorEmail.trim().toLowerCase() === userEmail) return true;
+        } else {
+          if (task.assigneeId === user.id) return true;
+          if (task.assigneeEmail && task.assigneeEmail.trim().toLowerCase() === userEmail) return true;
+        }
       }
-      return false;
-    } else {
-      const recipientEmail = (n.recipientEmail || '').trim().toLowerCase();
-      if (recipientEmail && userEmail && recipientEmail === userEmail) return true;
-      const task = tasks.find((t) => t.id === n.taskId);
-      if (task && (task.assigneeId === user.id || (task.assigneeEmail && task.assigneeEmail.toLowerCase() === userEmail))) {
-        return true;
-      }
-      return false;
     }
+
+    return false;
   });
 
   const selectedTaskObj = selectedNotification
@@ -76,8 +80,7 @@ export const NotificationDrawer: React.FC<NotificationDrawerProps> = ({ isOpen, 
               <Bell className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="font-bold text-slate-900 text-sm leading-tight font-serif">Email & Notifications Log</h3>
-              <p className="text-[11px] text-slate-500">Live dispatch history for task emails</p>
+              <h3 className="font-bold text-slate-900 text-sm leading-tight font-serif">Notifications</h3>
             </div>
           </div>
 
