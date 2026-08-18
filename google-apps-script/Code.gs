@@ -130,12 +130,13 @@ function doPost(e) {
  */
 function handleSendGmailNotification(payload) {
   try {
-    var recipientEmail = payload.recipientEmail || payload.to;
-    var subject = payload.subject;
-    var htmlBody = payload.htmlBody || payload.body;
+    var recipientEmail = String(payload.recipientEmail || payload.to || '').trim();
+    var subject = String(payload.subject || '').trim();
+    var htmlBody = payload.htmlBody || payload.body || '';
 
-    if (!recipientEmail || !subject) {
-      return createJsonResponse({ success: false, error: 'Missing recipientEmail or subject' });
+    if (!recipientEmail || !subject || recipientEmail.indexOf('@') === -1) {
+      Logger.log('[SendEmail Error] Invalid recipientEmail: ' + recipientEmail);
+      return createJsonResponse({ success: false, error: 'Invalid recipientEmail: ' + recipientEmail });
     }
 
     var mailOptions = {
@@ -159,60 +160,31 @@ function handleSendGmailNotification(payload) {
       }
     }
 
-    // Native Gmail File Attachments
-    var scriptAttachments = [];
-    if (payload.attachments && payload.attachments.length > 0) {
-      for (var i = 0; i < payload.attachments.length; i++) {
-        var att = payload.attachments[i];
-        if (att.dataUrl && att.dataUrl.indexOf('base64,') !== -1) {
-          try {
-            var parts = att.dataUrl.split('base64,');
-            var contentType = parts[0].split(':')[1].split(';')[0];
-            var base64Data = parts[1];
-            var decodedBytes = Utilities.base64Decode(base64Data);
-            var blob = Utilities.newBlob(decodedBytes, contentType, att.fileName || 'attachment');
-            scriptAttachments.push(blob);
-          } catch (attErr) {
-            Logger.log('Attachment conversion error: ' + attErr);
-          }
-        }
-      }
-    }
-
-    if (scriptAttachments.length > 0) {
-      mailOptions.attachments = scriptAttachments;
-    }
-
     var sent = false;
+    var lastError = '';
 
     // Primary: MailApp
     try {
-      MailApp.sendEmail(recipientEmail, subject, 'Deepwoods Notification', mailOptions);
+      MailApp.sendEmail(recipientEmail, subject, 'Deepwoods Task Notification', mailOptions);
       sent = true;
+      Logger.log('[SendEmail Success] Sent via MailApp to ' + recipientEmail);
     } catch (e1) {
-      Logger.log('MailApp with inlineImages failed, trying GmailApp: ' + e1);
+      lastError = e1.toString();
+      Logger.log('[SendEmail MailApp Failed] ' + e1 + ' for ' + recipientEmail);
       try {
-        GmailApp.sendEmail(recipientEmail, subject, 'Deepwoods Notification', mailOptions);
+        GmailApp.sendEmail(recipientEmail, subject, 'Deepwoods Task Notification', mailOptions);
         sent = true;
+        Logger.log('[SendEmail Success] Sent via GmailApp to ' + recipientEmail);
       } catch (e2) {
-        Logger.log('GmailApp also failed: ' + e2);
-        try {
-          // Fallback without inlineImages
-          MailApp.sendEmail(recipientEmail, subject, 'Deepwoods Notification', {
-            htmlBody: htmlBody,
-            name: 'Green Deepwoods'
-          });
-          sent = true;
-        } catch (e3) {
-          Logger.log('Fallback MailApp failed: ' + e3);
-        }
+        lastError = e2.toString();
+        Logger.log('[SendEmail GmailApp Failed] ' + e2 + ' for ' + recipientEmail);
       }
     }
 
     if (sent) {
       return createJsonResponse({ success: true, message: 'Email sent successfully to ' + recipientEmail });
     } else {
-      return createJsonResponse({ success: false, error: 'Failed to send email' });
+      return createJsonResponse({ success: false, error: 'Failed to send email to ' + recipientEmail + ': ' + lastError });
     }
   } catch (err) {
     Logger.log('Gmail send exception: ' + err);
