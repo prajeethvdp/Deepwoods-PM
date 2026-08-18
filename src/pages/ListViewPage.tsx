@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useData } from '../context/DataContext';
 import { useAuth } from '../context/AuthContext';
 import { isTaskAssignedToUser, matchesAssigneeFilter } from '../lib/permissions';
+import { sortTasksNewestFirst } from '../lib/sheets';
 import { Priority, Task, TaskStatus } from '../types';
 import {
   Calendar,
@@ -69,23 +70,25 @@ export const ListViewPage: React.FC<ListViewPageProps> = ({
 
   const today = startOfDay(new Date());
 
-  // Filter tasks based on global filter settings
-  const filteredTasks = tasks.filter((t) => {
-    if ((isEmployee || isMyTasksView) && user && !isTaskAssignedToUser(t, user)) return false;
-    if (selectedProjectId !== 'ALL' && t.projectId !== selectedProjectId) return false;
-    if (
-      filterOptions.searchQuery &&
-      !t.title.toLowerCase().includes(filterOptions.searchQuery.toLowerCase()) &&
-      !t.description.toLowerCase().includes(filterOptions.searchQuery.toLowerCase())
-    ) {
-      return false;
-    }
-    if (!isMyTasksView && !matchesAssigneeFilter(t, filterOptions.assigneeId, teamMembers)) return false;
-    if (filterOptions.priority !== 'All' && t.priority !== filterOptions.priority) return false;
-    if (filterOptions.status !== 'All' && t.status !== filterOptions.status) return false;
-    if (!isMyTasksView && filterOptions.myTasksOnly && user && !isTaskAssignedToUser(t, user)) return false;
-    return true;
-  });
+  // Filter tasks based on global filter settings, sorted newest first
+  const filteredTasks = sortTasksNewestFirst(
+    tasks.filter((t) => {
+      if ((isEmployee || isMyTasksView) && user && !isTaskAssignedToUser(t, user)) return false;
+      if (selectedProjectId !== 'ALL' && t.projectId !== selectedProjectId) return false;
+      if (
+        filterOptions.searchQuery &&
+        !t.title.toLowerCase().includes(filterOptions.searchQuery.toLowerCase()) &&
+        !t.description.toLowerCase().includes(filterOptions.searchQuery.toLowerCase())
+      ) {
+        return false;
+      }
+      if (!isMyTasksView && !matchesAssigneeFilter(t, filterOptions.assigneeId, teamMembers)) return false;
+      if (filterOptions.priority !== 'All' && t.priority !== filterOptions.priority) return false;
+      if (filterOptions.status !== 'All' && t.status !== filterOptions.status) return false;
+      if (!isMyTasksView && filterOptions.myTasksOnly && user && !isTaskAssignedToUser(t, user)) return false;
+      return true;
+    })
+  );
 
   // Group status configurations (Matching exact DB Status Strings & clean styling)
   const statusGroups: {
@@ -138,7 +141,7 @@ export const ListViewPage: React.FC<ListViewPageProps> = ({
   return (
     <div className="w-full min-h-full bg-[#EEF2F6] p-4 md:p-5 space-y-4 text-slate-800 font-sans select-none">
       {statusGroups.map((group) => {
-        const groupTasks = filteredTasks.filter((t) => t.status === group.statusKey);
+        const groupTasks = filteredTasks.filter((t: Task) => t.status === group.statusKey);
         const isCollapsed = collapsedSections[group.statusKey];
 
         return (
@@ -212,6 +215,12 @@ export const ListViewPage: React.FC<ListViewPageProps> = ({
                       </th>
                       <th className="py-3 px-4">
                         <div className="flex items-center gap-1.5">
+                          <Users className="w-3.5 h-3.5 text-emerald-600" />
+                          <span>Assignor</span>
+                        </div>
+                      </th>
+                      <th className="py-3 px-4">
+                        <div className="flex items-center gap-1.5">
                           <Calendar className="w-3.5 h-3.5 text-slate-400" />
                           <span>Start</span>
                         </div>
@@ -235,13 +244,23 @@ export const ListViewPage: React.FC<ListViewPageProps> = ({
                   <tbody className="divide-y divide-slate-100 font-medium">
                     {groupTasks.length === 0 ? (
                       <tr>
-                        <td colSpan={5} className="py-6 text-center text-slate-400 italic">
+                        <td colSpan={6} className="py-6 text-center text-slate-400 italic">
                           No tasks in {group.title}.
                         </td>
                       </tr>
                     ) : (
-                      groupTasks.map((task) => {
+                      groupTasks.map((task: Task) => {
                         const assignee = teamMembers.find((m) => m.id === task.assigneeId);
+                        const assignorMember = teamMembers.find(
+                          (m) =>
+                            (task.assignorId && m.id === task.assignorId) ||
+                            (task.assignorEmail && m.email.trim().toLowerCase() === task.assignorEmail.trim().toLowerCase()) ||
+                            (task.assignorName && m.name.trim().toLowerCase() === task.assignorName.trim().toLowerCase())
+                        );
+                        const fallbackAdminOrLead = teamMembers.find((m) => m.role === 'Admin' || m.role === 'Product Manager') || teamMembers[0];
+                        const assignorName = assignorMember?.name || task.assignorName || (task.assignorEmail?.includes('@') ? task.assignorEmail.split('@')[0] : fallbackAdminOrLead?.name || 'Assignor');
+                        const assignorColor = assignorMember?.color || fallbackAdminOrLead?.color || '#059669';
+
                         const isOverdue =
                           task.dueDate &&
                           isBefore(parseISO(task.dueDate), today) &&
@@ -299,6 +318,21 @@ export const ListViewPage: React.FC<ListViewPageProps> = ({
                               ) : (
                                 <span className="text-slate-400 italic text-[11px]">Unassigned</span>
                               )}
+                            </td>
+
+                            {/* Assignor */}
+                            <td className="py-3.5 px-4">
+                              <div className="flex items-center gap-2">
+                                <span
+                                  className="w-5 h-5 rounded-full text-white text-[9px] font-bold flex items-center justify-center ring-1 ring-slate-200 flex-shrink-0"
+                                  style={{ backgroundColor: assignorColor }}
+                                >
+                                  {assignorName.charAt(0).toUpperCase()}
+                                </span>
+                                <span className="text-xs font-semibold text-slate-700 truncate">
+                                  {assignorName}
+                                </span>
+                              </div>
                             </td>
 
                             {/* Start Date */}

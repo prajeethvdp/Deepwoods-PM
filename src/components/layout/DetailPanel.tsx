@@ -67,7 +67,7 @@ export const DetailPanel: React.FC = () => {
       setDescription(selectedTask.description);
       setProjectId(selectedTask.projectId);
       setAssigneeId(selectedTask.assigneeId);
-      setAssignorId(selectedTask.assignorId || 'tm-admin');
+      setAssignorId(selectedTask.assignorId || '');
       setPriority(selectedTask.priority);
       setStatus(selectedTask.status);
       setStartDate(toYYYYMMDD(selectedTask.startDate));
@@ -88,20 +88,29 @@ export const DetailPanel: React.FC = () => {
   const currentAssignee = teamMembers.find((m) => m.id === assigneeId);
 
   // Resolve Assignor (Who assigned the task)
-  const assignorMember =
-    teamMembers.find(
-      (m) =>
-        m.id === selectedTask.assignorId ||
-        (selectedTask.assignorEmail && m.email.toLowerCase() === selectedTask.assignorEmail.toLowerCase())
-    ) || teamMembers.find((m) => m.role === 'Admin' || m.role?.toLowerCase().includes('admin'));
+  const assignorMember = teamMembers.find(
+    (m) =>
+      (selectedTask.assignorId && m.id === selectedTask.assignorId) ||
+      (selectedTask.assignorEmail && m.email.trim().toLowerCase() === selectedTask.assignorEmail.trim().toLowerCase()) ||
+      (selectedTask.assignorName && m.name.trim().toLowerCase() === selectedTask.assignorName.trim().toLowerCase())
+  );
+
+  const fallbackAdminOrLead = teamMembers.find((m) => m.role === 'Admin' || m.role === 'Product Manager') || teamMembers[0];
 
   const assignorName =
     assignorMember?.name ||
+    selectedTask.assignorName ||
     (selectedTask.assignorEmail && selectedTask.assignorEmail.includes('@')
       ? selectedTask.assignorEmail.split('@')[0]
-      : user?.name || 'Prajeeth V');
-  const assignorRole = assignorMember?.role || 'Admin';
-  const assignorColor = assignorMember?.color || '#059669';
+      : fallbackAdminOrLead?.name || 'Assignor');
+
+  const assignorRole =
+    assignorMember?.role ||
+    selectedTask.assignorRole ||
+    fallbackAdminOrLead?.role ||
+    'Admin';
+
+  const assignorColor = assignorMember?.color || fallbackAdminOrLead?.color || '#059669';
 
   const currentProject = projects.find((p) => p.id === projectId);
   const taskComments = comments.filter((c) => c.taskId === selectedTask.id);

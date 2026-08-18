@@ -383,8 +383,11 @@ export function createCompletionNotification(
   `;
 
   const subject = `Task Completed: ${task.title} - ${projectName}`;
-  const fullHtml = generateDynamicCompanyEmail(assignorFirstName, assignor, mainDynamicContent);
 
+  // Generate completion email addressed to Admin (recipient = assignorFirstName), signed by Employee (senderMember = assignee)
+  const fullHtml = generateDynamicCompanyEmail(assignorFirstName, assignee, mainDynamicContent);
+
+  // Send EXCLUSIVELY to Assignor / Admin email address (do not send to completing employee)
   const recipientEmails = new Set<string>();
   if (assignor.email && assignor.email.includes('@')) {
     recipientEmails.add(assignor.email.trim().toLowerCase());
@@ -392,8 +395,11 @@ export function createCompletionNotification(
   if (task.assignorEmail && task.assignorEmail.includes('@')) {
     recipientEmails.add(task.assignorEmail.trim().toLowerCase());
   }
-  recipientEmails.add('prajeethv100@gmail.com');
-  recipientEmails.add('prajeeth@deepwoodsgreen.com');
+
+  // Fallback to workspace admin email if assignor email not resolved
+  if (recipientEmails.size === 0) {
+    recipientEmails.add('prajeeth@deepwoodsgreen.com');
+  }
 
   recipientEmails.forEach((email) => {
     dispatchEmailToGmail(email, subject, fullHtml, attachmentsList);

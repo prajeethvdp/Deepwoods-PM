@@ -17,7 +17,7 @@ const SHEET_NAMES = {
 };
 
 const HEADERS = {
-  TASKS: ['ID', 'Title', 'Description', 'Project ID', 'Assignee ID', 'Priority', 'Status', 'Start Date', 'Due Date', 'Created At', 'Updated At'],
+  TASKS: ['ID', 'Title', 'Description', 'Project ID', 'Assignee ID', 'Priority', 'Status', 'Start Date', 'Due Date', 'Created At', 'Updated At', 'Assignor ID', 'Assignor Email', 'Assignor Name', 'Assignor Role'],
   PROJECTS: ['ID', 'Name', 'Client Name', 'Description', 'Color', 'Start Date', 'End Date', 'Status', 'Created At'],
   TEAM: ['ID', 'Name', 'Role', 'Email', 'Color', 'Active', 'Password'],
   COMMENTS: ['ID', 'Task ID', 'Author ID', 'Text', 'Created At'],
@@ -140,8 +140,12 @@ function handleSendGmailNotification(payload) {
 
     var mailOptions = {
       htmlBody: htmlBody,
-      name: 'Green Deepwoods'
+      name: payload.senderName || 'Deepwoods Green'
     };
+
+    if (payload.replyTo) {
+      mailOptions.replyTo = payload.replyTo;
+    }
 
     // Include logo inline image attachment only if referenced in htmlBody
     if (htmlBody && htmlBody.indexOf('cid:company_logo') !== -1) {
@@ -312,6 +316,10 @@ function getSheetData(spreadsheet, sheetName) {
         dueDate: formatDateValue(row[8], timeZone),
         createdAt: formatDateValue(row[9], timeZone),
         updatedAt: formatDateValue(row[10], timeZone),
+        assignorId: String(row[11] || ''),
+        assignorEmail: String(row[12] || ''),
+        assignorName: String(row[13] || ''),
+        assignorRole: String(row[14] || ''),
       };
     }
     if (sheetName === SHEET_NAMES.PROJECTS) {
@@ -449,6 +457,10 @@ function taskToRow(task) {
     task.dueDate || '',
     task.createdAt || new Date().toISOString(),
     task.updatedAt || new Date().toISOString(),
+    task.assignorId || '',
+    task.assignorEmail || '',
+    task.assignorName || '',
+    task.assignorRole || '',
   ];
 }
 

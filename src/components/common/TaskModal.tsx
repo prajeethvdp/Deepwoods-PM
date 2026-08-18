@@ -5,6 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 import { Priority, TaskStatus, TaskAttachment } from '../../types';
 import { PRIORITY_CONFIG } from '../../lib/constants';
 import { toYYYYMMDD } from '../../lib/dateUtils';
+import { normalizeRole } from '../../lib/permissions';
 
 interface TaskModalProps {
   isOpen: boolean;
@@ -41,9 +42,14 @@ export const TaskModal: React.FC<TaskModalProps> = ({
       setTitle('');
       setDescription('');
       setProjectId(selectedProjectId !== 'ALL' ? selectedProjectId : projects[0]?.id || '');
-      const assignable = teamMembers.filter((m) => m.role !== 'Admin');
+      const assignable = teamMembers.filter((m) => normalizeRole(m.role) === 'Employee');
       setAssigneeId(assignable[0]?.id || teamMembers[0]?.id || '');
-      setAssignorId(user?.id || teamMembers[0]?.id || 'tm-3');
+      const assignorMembers = teamMembers.filter((m) => {
+        const norm = normalizeRole(m.role);
+        return norm === 'Admin' || norm === 'Product Manager';
+      });
+      const defaultAssignor = assignorMembers.find((m) => m.id === user?.id) || assignorMembers[0] || user;
+      setAssignorId(defaultAssignor?.id || user?.id || '');
       setPriority('Medium');
       setStatus(defaultStatus);
       const initialDate = defaultDate || toYYYYMMDD(new Date());
@@ -90,15 +96,18 @@ export const TaskModal: React.FC<TaskModalProps> = ({
     try {
       const selectedAssigneeMember = teamMembers.find((m) => m.id === assigneeId);
       const selectedAssignorMember = teamMembers.find((m) => m.id === assignorId);
+      const activeAssignor = selectedAssignorMember || user;
 
       await createTask({
         title: title.trim(),
         description: description.trim(),
         projectId: projectId || projects[0]?.id || 'p-1',
-        assigneeId: assigneeId || teamMembers[0]?.id || 'tm-1',
-        assigneeEmail: selectedAssigneeMember?.email || 'member@deepwoodsgreen.com',
-        assignorId: assignorId || user?.id || 'tm-3',
-        assignorEmail: selectedAssignorMember?.email || user?.email || 'prajeeth@deepwoodsgreen.com',
+        assigneeId: assigneeId || teamMembers[0]?.id || '',
+        assigneeEmail: selectedAssigneeMember?.email || '',
+        assignorId: activeAssignor?.id || user?.id || '',
+        assignorEmail: activeAssignor?.email || user?.email || '',
+        assignorName: activeAssignor?.name || user?.name || 'Assignor',
+        assignorRole: activeAssignor?.role || user?.role || 'Admin',
         priority,
         status,
         startDate: toYYYYMMDD(startDate),
@@ -198,11 +207,16 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                 onChange={(e) => setAssignorId(e.target.value)}
                 className="w-full bg-slate-50 border border-slate-200 rounded-none p-2.5 text-xs text-slate-900 font-medium focus:bg-white focus:outline-none focus:border-emerald-600 cursor-pointer"
               >
-                {teamMembers.map((m) => (
-                  <option key={m.id} value={m.id}>
-                    {m.name} ({m.email})
-                  </option>
-                ))}
+                {teamMembers
+                  .filter((m) => {
+                    const norm = normalizeRole(m.role);
+                    return norm === 'Admin' || norm === 'Product Manager';
+                  })
+                  .map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.name} ({normalizeRole(m.role)})
+                    </option>
+                  ))}
               </select>
             </div>
 

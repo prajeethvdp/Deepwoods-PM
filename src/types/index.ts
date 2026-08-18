@@ -20,6 +20,8 @@ export interface Task {
   assigneeEmail?: string;
   assignorId?: string;
   assignorEmail?: string;
+  assignorName?: string;
+  assignorRole?: string;
   priority: Priority;
   status: TaskStatus;
   startDate: string; // YYYY-MM-DD

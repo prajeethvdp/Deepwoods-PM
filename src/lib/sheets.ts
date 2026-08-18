@@ -50,13 +50,23 @@ const normalizeTaskDates = (task: Task): Task => ({
   dueDate: toYYYYMMDD(task.dueDate),
 });
 
+export const sortTasksNewestFirst = (taskList: Task[]): Task[] => {
+  return [...taskList].sort((a, b) => {
+    const timeA = new Date(a.createdAt || a.updatedAt || 0).getTime();
+    const timeB = new Date(b.createdAt || b.updatedAt || 0).getTime();
+    if (timeA !== timeB) return timeB - timeA;
+    return (b.id || '').localeCompare(a.id || '');
+  });
+};
+
 // Local Storage Getters and Setters
 export const loadTasksFromStorage = (): Task[] => {
   const saved = localStorage.getItem(TASKS_STORAGE_KEY);
   if (!saved) return [];
   try {
     const raw: Task[] = JSON.parse(saved);
-    return raw.map(normalizeTaskDates);
+    const normalized = raw.map(normalizeTaskDates);
+    return sortTasksNewestFirst(normalized);
   } catch {
     return [];
   }
@@ -64,7 +74,8 @@ export const loadTasksFromStorage = (): Task[] => {
 
 export const saveTasksToStorage = (tasks: Task[]): void => {
   const normalized = tasks.map(normalizeTaskDates);
-  localStorage.setItem(TASKS_STORAGE_KEY, JSON.stringify(normalized));
+  const sorted = sortTasksNewestFirst(normalized);
+  localStorage.setItem(TASKS_STORAGE_KEY, JSON.stringify(sorted));
 };
 
 export const loadProjectsFromStorage = (): Project[] => {
@@ -124,13 +135,14 @@ export async function syncAllWithAppsScript(): Promise<{
     const result = await res.json();
     if (result.success && result.data) {
       const normalizedTasks = (result.data.tasks || []).map(normalizeTaskDates);
-      saveTasksToStorage(normalizedTasks);
+      const sortedTasks = sortTasksNewestFirst(normalizedTasks);
+      saveTasksToStorage(sortedTasks);
       saveProjectsToStorage(result.data.projects || []);
       saveTeamToStorage(result.data.teamMembers || []);
       saveCommentsToStorage(result.data.comments || []);
       return {
         ...result.data,
-        tasks: normalizedTasks,
+        tasks: sortedTasks,
       };
     }
   } catch {

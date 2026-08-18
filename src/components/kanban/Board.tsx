@@ -13,6 +13,7 @@ import { Task, TaskStatus, Priority } from '../../types';
 import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
 import { isTaskAssignedToUser, matchesAssigneeFilter } from '../../lib/permissions';
+import { sortTasksNewestFirst } from '../../lib/sheets';
 import { Column } from './Column';
 import { TaskCard } from './TaskCard';
 import { Layers, CheckSquare, Users, Folder, AlertCircle } from 'lucide-react';
@@ -51,42 +52,44 @@ export const Board: React.FC<BoardProps> = ({ openTaskModalWithStatus, isMyTasks
 
   const assignableMembers = teamMembers.filter((m) => m.role !== 'Admin');
 
-  // Apply project and filter criteria
-  const filteredTasks = tasks.filter((t) => {
-    // Strictly filter to user's tasks if Employee or in My Tasks View
-    if ((isEmployee || isMyTasksView) && user && !isTaskAssignedToUser(t, user)) {
-      return false;
-    }
-    // Project filter
-    if (selectedProjectId !== 'ALL' && t.projectId !== selectedProjectId) {
-      return false;
-    }
-    // Search query
-    if (
-      filterOptions.searchQuery &&
-      !t.title.toLowerCase().includes(filterOptions.searchQuery.toLowerCase()) &&
-      !t.description.toLowerCase().includes(filterOptions.searchQuery.toLowerCase())
-    ) {
-      return false;
-    }
-    // Assignee filter (only when not in My Tasks View)
-    if (!isMyTasksView && !matchesAssigneeFilter(t, filterOptions.assigneeId, teamMembers)) {
-      return false;
-    }
-    // Priority filter
-    if (filterOptions.priority !== 'All' && t.priority !== filterOptions.priority) {
-      return false;
-    }
-    // Status filter
-    if (filterOptions.status !== 'All' && t.status !== filterOptions.status) {
-      return false;
-    }
-    // My Tasks toggle (in standard board view)
-    if (!isMyTasksView && filterOptions.myTasksOnly && user && t.assigneeId !== user.id) {
-      return false;
-    }
-    return true;
-  });
+  // Apply project and filter criteria, sorted newest first
+  const filteredTasks = sortTasksNewestFirst(
+    tasks.filter((t) => {
+      // Strictly filter to user's tasks if Employee or in My Tasks View
+      if ((isEmployee || isMyTasksView) && user && !isTaskAssignedToUser(t, user)) {
+        return false;
+      }
+      // Project filter
+      if (selectedProjectId !== 'ALL' && t.projectId !== selectedProjectId) {
+        return false;
+      }
+      // Search query
+      if (
+        filterOptions.searchQuery &&
+        !t.title.toLowerCase().includes(filterOptions.searchQuery.toLowerCase()) &&
+        !t.description.toLowerCase().includes(filterOptions.searchQuery.toLowerCase())
+      ) {
+        return false;
+      }
+      // Assignee filter (only when not in My Tasks View)
+      if (!isMyTasksView && !matchesAssigneeFilter(t, filterOptions.assigneeId, teamMembers)) {
+        return false;
+      }
+      // Priority filter
+      if (filterOptions.priority !== 'All' && t.priority !== filterOptions.priority) {
+        return false;
+      }
+      // Status filter
+      if (filterOptions.status !== 'All' && t.status !== filterOptions.status) {
+        return false;
+      }
+      // My Tasks toggle (in standard board view)
+      if (!isMyTasksView && filterOptions.myTasksOnly && user && t.assigneeId !== user.id) {
+        return false;
+      }
+      return true;
+    })
+  );
 
   const handleDragStart = (event: DragStartEvent) => {
     const { active } = event;

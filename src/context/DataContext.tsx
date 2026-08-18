@@ -14,6 +14,7 @@ import {
   getSheetsConfig,
   syncAllWithAppsScript,
   sendAppsScriptAction,
+  sortTasksNewestFirst,
 } from '../lib/sheets';
 import {
   loadEmailNotifications,
@@ -217,19 +218,24 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
           const assignorMember = teamMembers.find(
             (m) =>
-              m.id === task.assignorId ||
-              (task.assignorEmail && m.email.toLowerCase() === task.assignorEmail.toLowerCase())
+              (task.assignorId && m.id === task.assignorId) ||
+              (task.assignorEmail && m.email.trim().toLowerCase() === task.assignorEmail.trim().toLowerCase()) ||
+              (task.assignorName && m.name.trim().toLowerCase() === task.assignorName.trim().toLowerCase())
           );
 
-          const assignorEmail = task.assignorEmail || assignorMember?.email || 'prajeeth.deepwoods@gmail.com';
-          const assignorName = assignorMember?.name || 'Project Lead';
+          const defaultAdminOrLead: TeamMember | undefined = teamMembers.find((m) => m.role === 'Admin' || m.role === 'Product Manager') || teamMembers[0];
+
+          const assignorName = task.assignorName || assignorMember?.name || defaultAdminOrLead?.name || 'Assignor';
+          const assignorEmail = task.assignorEmail || assignorMember?.email || defaultAdminOrLead?.email || '';
+          const assignorRole = task.assignorRole || assignorMember?.role || defaultAdminOrLead?.role || 'Admin';
+          const assignorColor = assignorMember?.color || (defaultAdminOrLead ? defaultAdminOrLead.color : '#06B6D4');
 
           const assignor: TeamMember = assignorMember || {
-            id: task.assignorId || 'tm-3',
+            id: task.assignorId || defaultAdminOrLead?.id || 'assignor-id',
             name: assignorName,
             email: assignorEmail,
-            role: 'Project Lead',
-            color: '#06B6D4',
+            role: assignorRole,
+            color: assignorColor,
             active: true,
           };
 
@@ -390,7 +396,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const syncedData = await syncAllWithAppsScript();
       if (syncedData) {
-        setTasks(syncedData.tasks || []);
+        const sortedTasks = sortTasksNewestFirst(syncedData.tasks || []);
+        setTasks(sortedTasks);
+        saveTasksToStorage(sortedTasks);
         setProjects(syncedData.projects || []);
         setTeamMembers(syncedData.teamMembers || []);
         setComments(syncedData.comments || []);
@@ -476,7 +484,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       updatedAt: new Date().toISOString(),
     };
 
-    const updatedTasks = [newTask, ...tasks];
+    const updatedTasks = sortTasksNewestFirst([newTask, ...tasks]);
     setTasks(updatedTasks);
 
     // Robust Assignee & Assignor Resolution
@@ -497,18 +505,25 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     const assignorMember = teamMembers.find(
-      (m) => m.id === newTask.assignorId || m.email.toLowerCase() === (newTask.assignorEmail || newTask.assignorId || '').toLowerCase()
+      (m) =>
+        (newTask.assignorId && m.id === newTask.assignorId) ||
+        (newTask.assignorEmail && m.email.trim().toLowerCase() === newTask.assignorEmail.trim().toLowerCase()) ||
+        (newTask.assignorName && m.name.trim().toLowerCase() === newTask.assignorName.trim().toLowerCase())
     );
 
-    const assignorEmail = newTask.assignorEmail || assignorMember?.email || 'prajeeth@deepwoodsgreen.com';
-    const assignorName = assignorMember?.name || (assignorEmail.includes('@') ? assignorEmail.split('@')[0] : 'Project Lead');
+    const activeUserOrLead: TeamMember | undefined = currentUser || teamMembers.find((m) => m.role === 'Admin' || m.role === 'Product Manager') || teamMembers[0];
+
+    const assignorEmail = newTask.assignorEmail || assignorMember?.email || activeUserOrLead?.email || '';
+    const assignorName = newTask.assignorName || assignorMember?.name || activeUserOrLead?.name || 'Assignor';
+    const assignorRole = newTask.assignorRole || assignorMember?.role || activeUserOrLead?.role || 'Admin';
+    const assignorColor = assignorMember?.color || (activeUserOrLead ? activeUserOrLead.color : '#06B6D4');
 
     const assignor: TeamMember = assignorMember || {
-      id: newTask.assignorId || 'tm-3',
+      id: newTask.assignorId || activeUserOrLead?.id || 'tm-assignor',
       name: assignorName,
       email: assignorEmail,
-      role: 'Project Lead',
-      color: '#06B6D4',
+      role: assignorRole,
+      color: assignorColor,
       active: true,
     };
 
@@ -591,16 +606,26 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         active: true,
       };
 
-      const assignorMember = teamMembers.find((m) => m.id === taskObj.assignorId || m.email.toLowerCase() === (taskObj.assignorEmail || '').toLowerCase());
-      const assignorEmail = taskObj.assignorEmail || assignorMember?.email || 'prajeeth@deepwoodsgreen.com';
-      const assignorName = assignorMember?.name || (assignorEmail.includes('@') ? assignorEmail.split('@')[0] : 'Project Lead');
+      const assignorMember = teamMembers.find(
+        (m) =>
+          (taskObj.assignorId && m.id === taskObj.assignorId) ||
+          (taskObj.assignorEmail && m.email.trim().toLowerCase() === taskObj.assignorEmail.trim().toLowerCase()) ||
+          (taskObj.assignorName && m.name.trim().toLowerCase() === taskObj.assignorName.trim().toLowerCase())
+      );
+
+      const defaultAdminOrLead: TeamMember | undefined = teamMembers.find((m) => m.role === 'Admin' || m.role === 'Product Manager') || teamMembers[0];
+
+      const assignorEmail = taskObj.assignorEmail || assignorMember?.email || defaultAdminOrLead?.email || '';
+      const assignorName = taskObj.assignorName || assignorMember?.name || defaultAdminOrLead?.name || 'Assignor';
+      const assignorRole = taskObj.assignorRole || assignorMember?.role || defaultAdminOrLead?.role || 'Admin';
+      const assignorColor = assignorMember?.color || (defaultAdminOrLead ? defaultAdminOrLead.color : '#06B6D4');
 
       const assignor: TeamMember = assignorMember || {
-        id: taskObj.assignorId || 'tm-3',
+        id: taskObj.assignorId || defaultAdminOrLead?.id || 'tm-assignor',
         name: assignorName,
         email: assignorEmail,
-        role: 'Project Lead',
-        color: '#06B6D4',
+        role: assignorRole,
+        color: assignorColor,
         active: true,
       };
 
