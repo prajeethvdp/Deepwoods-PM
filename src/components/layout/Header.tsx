@@ -143,12 +143,12 @@ export const Header: React.FC<HeaderProps> = ({
       <div className="flex items-center gap-2.5 sm:gap-4 shrink-0">
         <div className="flex items-center gap-2">
           {currentTab === 'dashboard' && user ? (
-            <h1 className="font-bold text-base sm:text-lg text-slate-900 tracking-tight whitespace-nowrap font-serif flex items-center gap-2">
-              <span>Welcome back, {user.name}</span>
-              <img src="/favicon.png" alt="Leaf logo" className="w-5 h-5 object-contain inline-block" />
+            <h1 className="font-bold text-sm sm:text-lg text-slate-900 tracking-tight whitespace-nowrap font-serif flex items-center gap-1.5 sm:gap-2 max-w-[150px] sm:max-w-none truncate">
+              <span className="truncate">Welcome back, {user.name}</span>
+              <img src="/favicon.png" alt="Leaf logo" className="w-4 h-4 sm:w-5 sm:h-5 object-contain inline-block shrink-0" />
             </h1>
           ) : (
-            <h1 className="font-bold text-base sm:text-lg text-slate-900 tracking-tight whitespace-nowrap font-serif">
+            <h1 className="font-bold text-sm sm:text-lg text-slate-900 tracking-tight whitespace-nowrap font-serif truncate max-w-[140px] sm:max-w-none">
               {getTabTitle()}
             </h1>
           )}
@@ -156,12 +156,12 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* Project Switcher Dropdown (Only show on task/project views, not Team Settings or Docs) */}
         {currentTab !== 'team' && currentTab !== 'docs' && (
-          <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 px-2.5 sm:px-3 py-1.5 rounded-2xl text-xs font-semibold text-slate-700">
+          <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 px-2 sm:px-3 py-1.5 rounded-2xl text-xs font-semibold text-slate-700">
             <Folder className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0" />
             <select
               value={selectedProjectId}
               onChange={(e) => setSelectedProjectId(e.target.value)}
-              className="bg-transparent text-slate-900 font-bold focus:outline-none cursor-pointer pr-1 max-w-[120px] sm:max-w-[180px] truncate"
+              className="bg-transparent text-slate-900 font-bold focus:outline-none cursor-pointer pr-1 max-w-[95px] sm:max-w-[180px] truncate"
             >
               <option value="ALL">All Projects ({visibleProjects.length})</option>
               {visibleProjects.map((p) => (
@@ -178,7 +178,7 @@ export const Header: React.FC<HeaderProps> = ({
       <div className="flex items-center gap-1.5 sm:gap-3">
         {/* Search Bar - Hidden on Dashboard, Team Settings, and Docs */}
         {currentTab !== 'dashboard' && currentTab !== 'team' && currentTab !== 'docs' && (
-          <div className="relative w-28 sm:w-40 md:w-52">
+          <div className="relative w-24 sm:w-40 md:w-52">
             <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
             <input
               type="text"
@@ -187,7 +187,7 @@ export const Header: React.FC<HeaderProps> = ({
               onChange={(e) =>
                 setFilterOptions((prev) => ({ ...prev, searchQuery: e.target.value }))
               }
-              className="w-full pl-7 sm:pl-8 pr-2.5 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-full text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-200 transition"
+              className="w-full pl-7 sm:pl-8 pr-2 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-full text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-200 transition"
             />
           </div>
         )}
@@ -196,7 +196,7 @@ export const Header: React.FC<HeaderProps> = ({
         <div className="relative" ref={filterPopoverRef}>
           <button
             onClick={() => setIsFilterOpen(!isFilterOpen)}
-            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition ${activeFilterCount > 0 || isFilterOpen
+            className={`flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3.5 py-1.5 rounded-full text-xs font-bold transition ${activeFilterCount > 0 || isFilterOpen
                 ? 'bg-emerald-50 text-emerald-700 border border-emerald-300 shadow-2xs'
                 : 'bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200/60'
               }`}
@@ -213,7 +213,7 @@ export const Header: React.FC<HeaderProps> = ({
 
           {/* Filters Dropdown Popover Card */}
           {isFilterOpen && (
-            <div className="absolute right-0 top-full mt-2 w-80 sm:w-96 bg-white border border-slate-200/90 rounded-3xl p-5 shadow-xl z-50 animate-in fade-in zoom-in-95 duration-150 text-xs">
+            <div className="absolute right-0 top-full mt-2 w-[90vw] max-w-xs sm:w-96 bg-white border border-slate-200/90 rounded-3xl p-4 sm:p-5 shadow-xl z-50 animate-in fade-in zoom-in-95 duration-150 text-xs">
               <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
                 <div className="flex items-center gap-1.5 font-extrabold text-sm text-slate-900">
                   <Filter className="w-4 h-4 text-emerald-600" />

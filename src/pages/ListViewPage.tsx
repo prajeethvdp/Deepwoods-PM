@@ -198,8 +198,8 @@ export const ListViewPage: React.FC<ListViewPageProps> = ({
 
             {/* Section Data Table */}
             {!isCollapsed && (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
+              <div className="overflow-x-auto no-scrollbar">
+                <table className="w-full text-left text-xs min-w-[650px]">
                   <thead>
                     <tr className="border-b border-slate-100 text-slate-400 font-semibold text-[11px] bg-slate-50/40">
                       <th className="py-3 px-5">

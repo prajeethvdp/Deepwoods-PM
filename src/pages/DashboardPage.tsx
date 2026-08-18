@@ -383,8 +383,8 @@ export const DashboardPage: React.FC = () => {
               </span>
             </div>
 
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs text-slate-700">
+            <div className="overflow-x-auto no-scrollbar">
+              <table className="w-full text-left text-xs text-slate-700 min-w-[550px]">
                 <thead>
                   <tr className="border-b border-slate-100 text-slate-400 font-semibold text-[11px]">
                     <th className="py-2.5 px-2">#</th>

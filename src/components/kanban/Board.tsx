@@ -215,19 +215,20 @@ export const Board: React.FC<BoardProps> = ({ openTaskModalWithStatus, isMyTasks
 
       {/* Board Columns Container */}
       <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-        <div className="flex-1 overflow-x-auto p-5 min-h-0">
+        <div className="flex-1 overflow-x-auto p-3 sm:p-5 min-h-0">
           {/* Case 1: Standard Status Grouping (Default & Employee Mode) */}
           {(isEmployee || groupBy === 'status') && (
-            <div className="grid grid-cols-4 gap-4 h-full">
+            <div className="flex md:grid md:grid-cols-4 gap-4 h-full overflow-x-auto pb-4 snap-x snap-mandatory no-scrollbar">
               {KANBAN_COLUMNS.map((columnStatus) => {
                 const columnTasks = filteredTasks.filter((t) => t.status === columnStatus);
                 return (
-                  <Column
-                    key={columnStatus}
-                    status={columnStatus}
-                    tasks={columnTasks}
-                    onAddTask={openTaskModalWithStatus}
-                  />
+                  <div key={columnStatus} className="w-[285px] sm:w-[320px] md:w-auto shrink-0 md:shrink flex-1 snap-center h-full">
+                    <Column
+                      status={columnStatus}
+                      tasks={columnTasks}
+                      onAddTask={openTaskModalWithStatus}
+                    />
+                  </div>
                 );
               })}
             </div>
@@ -320,7 +321,7 @@ export const Board: React.FC<BoardProps> = ({ openTaskModalWithStatus, isMyTasks
 
           {/* Case 4: Group By Priority */}
           {!isEmployee && groupBy === 'priority' && (
-            <div className="grid grid-cols-4 gap-4 h-full">
+            <div className="flex md:grid md:grid-cols-4 gap-4 h-full overflow-x-auto pb-4 snap-x snap-mandatory no-scrollbar">
               {(['Urgent', 'High', 'Medium', 'Low'] as Priority[]).map((prio) => {
                 const prioTasks = filteredTasks.filter((t) => t.priority === prio);
                 const colorMap = {
@@ -332,7 +333,7 @@ export const Board: React.FC<BoardProps> = ({ openTaskModalWithStatus, isMyTasks
                 return (
                   <div
                     key={prio}
-                    className={`bg-slate-50/80 border border-slate-200 border-t-4 ${colorMap[prio]} rounded-none flex flex-col h-full`}
+                    className={`w-[285px] sm:w-[320px] md:w-auto shrink-0 md:shrink flex-1 snap-center bg-slate-50/80 border border-slate-200 border-t-4 ${colorMap[prio]} rounded-none flex flex-col h-full`}
                   >
                     <div className="px-4 py-3 border-b border-slate-200 bg-white flex items-center justify-between">
                       <span className="font-bold text-xs text-slate-900 font-serif">
