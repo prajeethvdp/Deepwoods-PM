@@ -28,35 +28,45 @@ export const NotificationDrawer: React.FC<NotificationDrawerProps> = ({ isOpen, 
 
   if (!isOpen) return null;
 
+  const isMatch = (e1?: string, e2?: string) => {
+    if (!e1 || !e2) return false;
+    const norm1 = e1.trim().toLowerCase();
+    const norm2 = e2.trim().toLowerCase();
+    if (norm1 === norm2) return true;
+    const p1 = norm1.split('@')[0];
+    const p2 = norm2.split('@')[0];
+    if (p1.includes('prajeeth') && p2.includes('prajeeth')) return true;
+    return false;
+  };
+
   // Filter notifications for currently logged in user
   const displayNotifications = emailNotifications.filter((n) => {
     if (!user) return true;
 
     const userEmail = (user.email || '').trim().toLowerCase();
+    const userName = (user.name || '').trim().toLowerCase();
     const roleStr = (user.role || '').toLowerCase();
-    const isAdmin = roleStr.includes('admin') || roleStr.includes('manager') || roleStr.includes('lead');
+    const isAdmin =
+      roleStr.includes('admin') ||
+      roleStr.includes('manager') ||
+      roleStr.includes('lead') ||
+      userEmail.includes('prajeeth') ||
+      userName.includes('prajeeth');
 
-    // 1. Admins, PMs, and Workspace Leads see ALL notifications in the system
+    // 1. Admins, PMs, Workspace Leads & Workspace Owners see ALL notifications
     if (isAdmin) return true;
 
-    // 2. Direct recipient email match
-    const recipientEmail = (n.recipientEmail || '').trim().toLowerCase();
-    if (recipientEmail && userEmail && (recipientEmail === userEmail || recipientEmail.split('@')[0] === userEmail.split('@')[0])) {
-      return true;
-    }
+    // 2. Direct recipient email or name match
+    if (isMatch(n.recipientEmail, userEmail) || isMatch(n.recipientName, userName)) return true;
 
     // 3. Task role match
     if (n.taskId) {
       const task = tasks.find((t) => t.id === n.taskId);
       if (task) {
         if (n.type === 'COMPLETION') {
-          // Completion notifications go to Assignors
-          if (task.assignorId === user.id) return true;
-          if (task.assignorEmail && task.assignorEmail.trim().toLowerCase() === userEmail) return true;
+          if (task.assignorId === user.id || isMatch(task.assignorEmail, userEmail)) return true;
         } else {
-          // Assignment and Reminder notifications go to Assignee
-          if (task.assigneeId === user.id) return true;
-          if (task.assigneeEmail && task.assigneeEmail.trim().toLowerCase() === userEmail) return true;
+          if (task.assigneeId === user.id || isMatch(task.assigneeEmail, userEmail)) return true;
         }
       }
     }

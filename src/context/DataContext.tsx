@@ -159,16 +159,36 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     saveEmailNotifications(emailNotifications);
   }, [emailNotifications]);
 
-  // Listen for real-time notification updates (e.g. new registration alerts)
+  // BroadcastChannel for instant cross-tab real-time sync
   useEffect(() => {
+    let bc: BroadcastChannel | null = null;
+    try {
+      bc = new BroadcastChannel('deepwoods_pm_channel');
+      bc.onmessage = () => {
+        const storedNotifs = loadEmailNotifications();
+        const storedTasks = loadTasksFromStorage();
+        const storedActivities = loadActivitiesFromStorage();
+        setEmailNotifications(storedNotifs);
+        setTasks(storedTasks);
+        setActivities(storedActivities);
+      };
+    } catch {
+      // Fallback for browsers without BroadcastChannel
+    }
+
     const syncNotifs = () => {
-      const stored = loadEmailNotifications();
-      setEmailNotifications(stored);
+      const storedNotifs = loadEmailNotifications();
+      const storedTasks = loadTasksFromStorage();
+      const storedActivities = loadActivitiesFromStorage();
+      setEmailNotifications(storedNotifs);
+      setTasks(storedTasks);
+      setActivities(storedActivities);
     };
 
     window.addEventListener('deepwoods_notification_updated', syncNotifs);
     window.addEventListener('storage', syncNotifs);
     return () => {
+      if (bc) bc.close();
       window.removeEventListener('deepwoods_notification_updated', syncNotifs);
       window.removeEventListener('storage', syncNotifs);
     };
@@ -620,6 +640,13 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
 
       if (typeof window !== 'undefined') {
+        try {
+          const bc = new BroadcastChannel('deepwoods_pm_channel');
+          bc.postMessage({ type: 'TASK_COMPLETED', taskId });
+          bc.close();
+        } catch {
+          // ignore
+        }
         window.dispatchEvent(new Event('deepwoods_notification_updated'));
         window.dispatchEvent(new Event('storage'));
       }
