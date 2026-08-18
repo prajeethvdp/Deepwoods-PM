@@ -6,6 +6,7 @@ import {
   ListTodo,
   Users,
   Calendar,
+  Mail,
   LogOut,
   FolderPlus,
   ChevronDown,

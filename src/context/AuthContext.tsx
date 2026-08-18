@@ -3,7 +3,6 @@ import { TeamMember, UserRole } from '../types';
 import { loadTeamFromStorage, saveTeamToStorage, sendAppsScriptAction, resetPasswordInBackend } from '../lib/sheets';
 import { hashPassword, verifyPassword } from '../lib/cryptoUtils';
 import { normalizeRole, canManageTeam, canManageProjects, canAccessTeamPage } from '../lib/permissions';
-import { generateAdminRegistrationEmail, generateUserApprovalConfirmationEmail } from '../lib/emailService';
 
 const PASSWORDS_STORAGE_KEY = 'deepwoods_user_passwords';
 const OTP_STORAGE_KEY = 'deepwoods_password_reset_otps';
@@ -21,55 +20,6 @@ const setStoredPassword = (email: string, hashedPassword: string) => {
   const map = getStoredPasswordMap();
   map[email.trim().toLowerCase()] = hashedPassword;
   localStorage.setItem(PASSWORDS_STORAGE_KEY, JSON.stringify(map));
-};
-
-const notifyAdminsOfNewRegistration = (newMember: TeamMember, team: TeamMember[]) => {
-  const adminEmails = team
-    .filter((m) => normalizeRole(m.role) === 'Admin' && m.email && m.active !== false)
-    .map((m) => m.email.trim().toLowerCase());
-
-  const recipients = Array.from(
-    new Set(adminEmails.length > 0 ? adminEmails : ['prajeethv100@gmail.com'])
-  );
-
-  const appUrl = typeof window !== 'undefined' ? window.location.origin : 'https://deepwoods-pm.vercel.app';
-  const approveUrl = `${appUrl}?approveEmail=${encodeURIComponent(newMember.email)}`;
-
-  const subject = `🚨 Action Required: Approve Account for ${newMember.name} (${newMember.email})`;
-  const emailHtml = generateAdminRegistrationEmail(newMember, approveUrl);
-
-  recipients.forEach((recipientEmail) => {
-    sendAppsScriptAction('sendEmail', {
-      recipientEmail,
-      subject,
-      htmlBody: emailHtml,
-    }).catch((err) => console.warn('Background admin alert email dispatch:', err));
-  });
-
-  try {
-    const rawNotifs = localStorage.getItem('deepwoods_email_notifications');
-    const notifs = rawNotifs ? JSON.parse(rawNotifs) : [];
-    const newNotif = {
-      id: `notif-reg-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
-      taskId: 'admin-alert',
-      recipientEmail: recipients[0],
-      recipientName: 'Workspace Admin',
-      assignorName: newMember.name,
-      assignorEmail: newMember.email,
-      taskTitle: `New Account: ${newMember.name} (${newMember.email})`,
-      projectName: 'Security Alert',
-      subject,
-      sentAt: new Date().toISOString(),
-      status: 'Sent',
-    };
-    localStorage.setItem('deepwoods_email_notifications', JSON.stringify([newNotif, ...notifs]));
-    if (typeof window !== 'undefined') {
-      window.dispatchEvent(new Event('deepwoods_notification_updated'));
-      window.dispatchEvent(new Event('storage'));
-    }
-  } catch (err) {
-    console.warn('Failed to save in-app admin registration notification:', err);
-  }
 };
 
 interface AuthContextType {
@@ -277,13 +227,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.warn('Background sheet addTeamMember sync:', err)
     );
 
-    // Notify Admins of new account creation
-    notifyAdminsOfNewRegistration(newMember, team);
-
     return {
       success: false,
       user: newMember,
-      error: `Account registered via Google! Your account is pending Admin approval. Your Workspace Admin has been notified to approve your access.`,
+      error: `Account registered via Google! Your account is pending Admin approval.`,
     };
   };
 
@@ -402,13 +349,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.warn('Background sheet password sync:', err)
     );
 
-    // Send Admin Notification email & in-app alert with One-Click Approval link
-    notifyAdminsOfNewRegistration(newMember, team);
-
     return {
       success: true,
       user: newMember,
-      error: `Account created successfully! Your account is pending Admin approval. You will receive an email once your Workspace Admin approves your access.`,
+      error: `Account created successfully! Your account is pending Admin approval.`,
     };
   };
 
@@ -437,17 +381,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     sendAppsScriptAction('updateTeamMember', { data: updatedMember }).catch((err) =>
       console.warn('Background sheet updateTeamMember sync:', err)
     );
-
-    // Send user email confirmation that their account has been approved!
-    const appUrl = typeof window !== 'undefined' ? window.location.origin : 'https://deepwoods-pm.vercel.app';
-    const subject = `🎉 Account Approved! Welcome to Deepwoods Green`;
-    const userEmailHtml = generateUserApprovalConfirmationEmail(updatedMember, assignedRole, appUrl);
-
-    sendAppsScriptAction('sendEmail', {
-      recipientEmail: normalized,
-      subject,
-      htmlBody: userEmailHtml,
-    }).catch((err) => console.warn('Background user approval email dispatch:', err));
 
     refreshUser(updatedTeam);
     return { success: true };

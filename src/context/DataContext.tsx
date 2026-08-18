@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { Task, Project, TeamMember, TaskComment, FilterOptions, SheetsConfig, TaskStatus, EmailNotification, TaskAttachment, TaskActivity } from '../types';
+import { Task, Project, TeamMember, TaskComment, FilterOptions, SheetsConfig, TaskStatus, TaskAttachment, TaskActivity } from '../types';
 import {
   loadTasksFromStorage,
   saveTasksToStorage,
@@ -16,16 +16,9 @@ import {
   sendAppsScriptAction,
   sortTasksNewestFirst,
 } from '../lib/sheets';
-import {
-  loadEmailNotifications,
-  saveEmailNotifications,
-  createAssignmentNotification,
-  createReminderNotification,
-  createCompletionNotification,
-  generateDynamicCompanyEmail,
-} from '../lib/emailService';
 import { isTaskAssignedToUser, matchesAssigneeFilter, normalizeRole, findTeamMemberByAssigneeId } from '../lib/permissions';
 import { useAuth } from './AuthContext';
+import { sendTaskAssignmentEmail } from '../lib/emailService';
 
 interface DataContextType {
   tasks: Task[];
@@ -33,7 +26,6 @@ interface DataContextType {
   teamMembers: TeamMember[];
   comments: TaskComment[];
   activities: TaskActivity[];
-  emailNotifications: EmailNotification[];
   filterOptions: FilterOptions;
   selectedProjectId: string;
   selectedTask: Task | null;
@@ -52,12 +44,6 @@ interface DataContextType {
   openTaskDetail: (task: Task) => void;
   closeTaskDetail: () => void;
   setFilterOptions: React.Dispatch<React.SetStateAction<FilterOptions>>;
-  
-  // Notifications & Emails
-  sendDeadlineReminder: (taskId: string, senderUser?: TeamMember, targetAssignee?: TeamMember) => Promise<boolean>;
-  markNotificationAsRead: (id: string) => void;
-  clearNotifications: () => void;
-  
   // Attachments
   addAttachmentToTask: (taskId: string, attachment: TaskAttachment) => Promise<void>;
   removeAttachmentFromTask: (taskId: string, attachmentId: string) => Promise<void>;
@@ -122,7 +108,6 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [projects, setProjects] = useState<Project[]>(() => loadProjectsFromStorage());
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>(() => loadTeamFromStorage());
   const [comments, setComments] = useState<TaskComment[]>(() => loadCommentsFromStorage());
-  const [emailNotifications, setEmailNotifications] = useState<EmailNotification[]>(() => loadEmailNotifications());
   const [activities, setActivities] = useState<TaskActivity[]>(() => loadActivitiesFromStorage());
   const [selectedTaskIds, setSelectedTaskIds] = useState<string[]>([]);
   
@@ -157,165 +142,44 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     saveActivitiesToStorage(activities);
   }, [activities]);
 
+  // Cross-tab real-time sync & periodic Google Sheets polling
   useEffect(() => {
-    saveEmailNotifications(emailNotifications);
-  }, [emailNotifications]);
-
-  // Listen for real-time notification updates (e.g. new registration alerts)
-  useEffect(() => {
-    const syncNotifs = () => {
-      const stored = loadEmailNotifications();
-      setEmailNotifications(stored);
-    };
-
-    window.addEventListener('deepwoods_notification_updated', syncNotifs);
-    window.addEventListener('storage', syncNotifs);
-    return () => {
-      window.removeEventListener('deepwoods_notification_updated', syncNotifs);
-      window.removeEventListener('storage', syncNotifs);
-    };
-  }, []);
-
-  // Initial Sync from Google Apps Script on mount
-  useEffect(() => {
-    syncWithGoogleSheets();
-  }, []);
-
-  // Auto-sync in-app notifications from tasks list so every assignee receives their notification
-  useEffect(() => {
-    if (!tasks || tasks.length === 0) return;
-
-    setEmailNotifications((prevNotifs) => {
-      const existingTaskIds = new Set(prevNotifs.map((n) => n.taskId));
-      const clearedSet = getClearedNotificationIds();
-      const newNotifications: EmailNotification[] = [];
-
-      tasks.forEach((task) => {
-        const isCleared = clearedSet.has(`task-${task.id}`);
-        if (!existingTaskIds.has(task.id) && !isCleared) {
-          const assigneeMember = teamMembers.find(
-            (m) =>
-              m.id === task.assigneeId ||
-              (task.assigneeEmail && m.email.toLowerCase() === task.assigneeEmail.toLowerCase()) ||
-              m.name.toLowerCase() === (task.assigneeId || '').toLowerCase()
-          );
-
-          const assigneeEmail =
-            task.assigneeEmail ||
-            assigneeMember?.email ||
-            (task.assigneeId.includes('@') ? task.assigneeId : 'prajeethv100@gmail.com');
-          const assigneeName =
-            assigneeMember?.name ||
-            (assigneeEmail.includes('@') ? assigneeEmail.split('@')[0] : 'Team Member');
-
-          const assignee: TeamMember = assigneeMember || {
-            id: task.assigneeId || 'tm-1',
-            name: assigneeName,
-            email: assigneeEmail,
-            role: 'Team Member',
-            color: '#2563EB',
-            active: true,
-          };
-
-          const assignorMember = teamMembers.find(
-            (m) =>
-              (task.assignorId && m.id === task.assignorId) ||
-              (task.assignorEmail && m.email.trim().toLowerCase() === task.assignorEmail.trim().toLowerCase()) ||
-              (task.assignorName && m.name.trim().toLowerCase() === task.assignorName.trim().toLowerCase())
-          );
-
-          const defaultAdminOrLead: TeamMember | undefined = teamMembers.find((m) => m.role === 'Admin' || m.role === 'Product Manager') || teamMembers[0];
-
-          const assignorName = task.assignorName || assignorMember?.name || defaultAdminOrLead?.name || 'Assignor';
-          const assignorEmail = task.assignorEmail || assignorMember?.email || defaultAdminOrLead?.email || '';
-          const assignorRole = task.assignorRole || assignorMember?.role || defaultAdminOrLead?.role || 'Admin';
-          const assignorColor = assignorMember?.color || (defaultAdminOrLead ? defaultAdminOrLead.color : '#06B6D4');
-
-          const assignor: TeamMember = assignorMember || {
-            id: task.assignorId || defaultAdminOrLead?.id || 'assignor-id',
-            name: assignorName,
-            email: assignorEmail,
-            role: assignorRole,
-            color: assignorColor,
-            active: true,
-          };
-
-          const project = projects.find((p) => p.id === task.projectId);
-          const attachmentsList = task.attachments || [];
-          const attachmentNames = attachmentsList.map((a) => a.fileName);
-          const projectName = project?.name || 'Decarb Project';
-
-          const attachmentHtml =
-            attachmentsList.length > 0
-              ? `<p style="font-family: 'Trebuchet MS', sans-serif; margin-top: 16px; margin-bottom: 6px;"><strong>Attached Documents (${attachmentsList.length}):</strong></p>
-                 <ul style="font-family: 'Trebuchet MS', sans-serif; padding-left: 20px; margin-top: 4px;">
-                   ${attachmentsList
-                     .map(
-                       (att) => `
-                     <li style="margin-bottom: 6px;">
-                       <strong>${att.fileName}</strong> <span style="color: #64748B; font-size: 12px;">(${att.fileSize})</span>
-                       ${
-                         att.dataUrl
-                           ? ` &nbsp;—&nbsp; <a href="${att.dataUrl}" download="${att.fileName}" style="color: #059669; font-weight: bold; text-decoration: underline;">Download Attachment</a>`
-                           : ''
-                       }
-                     </li>
-                   `
-                     )
-                     .join('')}
-                 </ul>`
-              : '';
-
-          const dynamicDescriptionText =
-            task.description && task.description.trim()
-              ? `<p style="font-family: 'Trebuchet MS', sans-serif; color: #1E293B; margin: 12px 0;">${task.description}</p>`
-              : `<p style="font-family: 'Trebuchet MS', sans-serif; color: #1E293B; margin: 12px 0;">You have been assigned the task <strong>${task.title}</strong> under the <strong>${projectName}</strong> project.</p>`;
-
-          const mainDynamicContent = `
-            ${dynamicDescriptionText}
-
-            <div style="font-family: 'Trebuchet MS', sans-serif; margin: 16px 0; padding: 14px 18px; background-color: #F8FAFC; border-left: 4px solid #059669; border-radius: 6px;">
-              <div style="margin-bottom: 8px; font-weight: bold; color: #0F172A; font-size: 15px;">Task Summary: ${task.title}</div>
-              <div>1. <strong>Project Name:</strong> ${projectName}</div>
-              <div>2. <strong>Priority Level:</strong> ${task.priority}</div>
-              <div>3. <strong>Start Date:</strong> ${task.startDate}</div>
-              <div>4. <strong>Target Deadline:</strong> <span style="color: #059669; font-weight: bold;">${task.dueDate}</span></div>
-            </div>
-
-            ${attachmentHtml}
-          `;
-
-          const subject = `Action Required: ${task.title} - ${projectName}`;
-          const firstName = assignee.name.split(' ')[0] || 'Team Member';
-          const fullHtml = generateDynamicCompanyEmail(firstName, assignor, mainDynamicContent);
-
-          const notif: EmailNotification = {
-            id: `email-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
-            type: 'ASSIGNMENT',
-            taskId: task.id,
-            taskTitle: task.title,
-            recipientEmail: assignee.email,
-            recipientName: assignee.name,
-            senderName: assignor.name,
-            subject,
-            body: fullHtml,
-            attachmentsCount: attachmentNames.length,
-            attachmentNames,
-            sentAt: task.createdAt || new Date().toISOString(),
-            read: false,
-            status: 'SENT',
-          };
-
-          newNotifications.push(notif);
-        }
-      });
-
-      if (newNotifications.length > 0) {
-        return [...newNotifications, ...prevNotifs];
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'deepwoods_tasks' && e.newValue) {
+        try { setTasks(JSON.parse(e.newValue)); } catch {}
       }
-      return prevNotifs;
-    });
-  }, [tasks, teamMembers, projects]);
+      if (e.key === 'deepwoods_comments' && e.newValue) {
+        try { setComments(JSON.parse(e.newValue)); } catch {}
+      }
+      if (e.key === 'deepwoods_projects' && e.newValue) {
+        try { setProjects(JSON.parse(e.newValue)); } catch {}
+      }
+      if (e.key === 'deepwoods_team' && e.newValue) {
+        try { setTeamMembers(JSON.parse(e.newValue)); } catch {}
+      }
+      if (e.key === 'deepwoods_activities' && e.newValue) {
+        try { setActivities(JSON.parse(e.newValue)); } catch {}
+      }
+    };
+
+    const handleFocus = () => {
+      syncWithGoogleSheets();
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('focus', handleFocus);
+
+    syncWithGoogleSheets();
+    const interval = setInterval(() => {
+      syncWithGoogleSheets();
+    }, 10000);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('focus', handleFocus);
+      clearInterval(interval);
+    };
+  }, []);
 
   const logActivity = (
     taskId: string,
@@ -374,104 +238,70 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsDetailPanelOpen(false);
   };
 
-  const markNotificationAsRead = (id: string) => {
-    setEmailNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, read: true } : n))
-    );
-  };
-
-  const clearNotifications = () => {
-    const clearedSet = getClearedNotificationIds();
-    emailNotifications.forEach((n) => {
-      if (n.id) clearedSet.add(n.id);
-      if (n.taskId) clearedSet.add(`task-${n.taskId}`);
-    });
-    tasks.forEach((t) => clearedSet.add(`task-${t.id}`));
-    saveClearedNotificationIds(clearedSet);
-
-    setEmailNotifications([]);
-  };
-
   const syncWithGoogleSheets = async () => {
     setIsSyncing(true);
     try {
       const syncedData = await syncAllWithAppsScript();
       if (syncedData) {
-        const sortedTasks = sortTasksNewestFirst(syncedData.tasks || []);
+        const localTasks = loadTasksFromStorage();
+        const mergedTasksMap = new Map<string, Task>();
+        (syncedData.tasks || []).forEach((st) => {
+          if (st.id) mergedTasksMap.set(st.id, st);
+        });
+        localTasks.forEach((lt) => {
+          if (!lt.id) return;
+          if (!mergedTasksMap.has(lt.id)) {
+            mergedTasksMap.set(lt.id, lt);
+          } else {
+            const st = mergedTasksMap.get(lt.id)!;
+            if ((!st.attachments || st.attachments.length === 0) && lt.attachments && lt.attachments.length > 0) {
+              mergedTasksMap.set(lt.id, { ...st, attachments: lt.attachments });
+            }
+          }
+        });
+        const mergedTasks = Array.from(mergedTasksMap.values());
+
+        const sortedTasks = sortTasksNewestFirst(mergedTasks);
         setTasks(sortedTasks);
         saveTasksToStorage(sortedTasks);
         setProjects(syncedData.projects || []);
         setTeamMembers(syncedData.teamMembers || []);
-        setComments(syncedData.comments || []);
+
+        // Merge local comments with synced comments to ensure freshly added comments are never lost before GS sync completes
+        const cleanId = (str: any): string => String(str || '').replace(/[\r\n\t]/g, '').trim();
+        const localComments = loadCommentsFromStorage().map((c) => ({
+          ...c,
+          id: cleanId(c.id),
+          taskId: cleanId(c.taskId),
+          authorId: cleanId(c.authorId),
+        }));
+        const syncedComments = (syncedData.comments || []).map((c) => ({
+          ...c,
+          id: cleanId(c.id),
+          taskId: cleanId(c.taskId),
+          authorId: cleanId(c.authorId),
+        }));
+        const mergedCommentsMap = new Map();
+        [...syncedComments, ...localComments].forEach((comm) => {
+          if (comm.id) mergedCommentsMap.set(comm.id, comm);
+        });
+        const mergedComments = Array.from(mergedCommentsMap.values());
+
+        setComments(mergedComments);
+        saveCommentsToStorage(mergedComments);
         if (syncedData.teamMembers && syncedData.teamMembers.length > 0) {
           refreshUser(syncedData.teamMembers);
+        }
+        if (selectedTask) {
+          const currentSelected = sortedTasks.find((t) => t.id === selectedTask.id);
+          if (currentSelected) {
+            setSelectedTask(currentSelected);
+          }
         }
       }
     } finally {
       setIsSyncing(false);
     }
-  };
-
-  // Trigger Deadline Reminder Email
-  const sendDeadlineReminder = async (taskId: string, senderUser?: TeamMember, targetAssignee?: TeamMember): Promise<boolean> => {
-    const task = tasks.find((t) => t.id === taskId);
-    if (!task) return false;
-
-    let assigneeMember = targetAssignee || findTeamMemberByAssigneeId(task.assigneeId, teamMembers, task.assigneeEmail);
-
-    let assigneeEmail = (
-      assigneeMember?.email ||
-      (task.assigneeEmail && task.assigneeEmail.includes('@') ? task.assigneeEmail : '') ||
-      (task.assigneeId && task.assigneeId.includes('@') ? task.assigneeId : '')
-    ).trim().toLowerCase();
-
-    // Partial match fallback if ID or Email isn't exact
-    if (!assigneeEmail || !assigneeEmail.includes('@')) {
-      const cleanAssigneeId = (task.assigneeId || '').replace(/\s*\([^)]*\)/g, '').trim().toLowerCase();
-      const partialMatch = teamMembers.find(
-        (m) =>
-          m.email &&
-          m.email.includes('@') &&
-          cleanAssigneeId &&
-          (m.name.toLowerCase().includes(cleanAssigneeId) || cleanAssigneeId.includes(m.name.toLowerCase()))
-      );
-      if (partialMatch) {
-        assigneeMember = partialMatch;
-        assigneeEmail = partialMatch.email.trim().toLowerCase();
-      }
-    }
-
-    if (!assigneeEmail || !assigneeEmail.includes('@')) {
-      alert('Cannot send reminder email: No valid email address found for task assignee.');
-      return false;
-    }
-
-    const assigneeName =
-      assigneeMember?.name ||
-      (assigneeEmail.includes('@') ? assigneeEmail.split('@')[0] : 'Team Member');
-
-    const assignee: TeamMember = assigneeMember || {
-      id: task.assigneeId || `tm-${Date.now()}`,
-      name: assigneeName,
-      email: assigneeEmail,
-      role: 'Employee',
-      color: '#10B981',
-      active: true,
-    };
-
-    const project = projects.find((p) => p.id === task.projectId);
-
-    const notification = createReminderNotification(task, assignee, project, senderUser);
-    setEmailNotifications((prev) => [notification, ...prev]);
-
-    if (typeof window !== 'undefined') {
-      window.dispatchEvent(new Event('deepwoods_notification_updated'));
-      window.dispatchEvent(new Event('storage'));
-    }
-
-    logActivity(taskId, 'UPDATED', `Sent deadline reminder email to ${assignee.name} (${assignee.email})`);
-
-    return true;
   };
 
   // Add Attachment to Task
@@ -480,14 +310,19 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!task) return;
     const updatedAttachments = [...(task.attachments || []), attachment];
     await updateTask(taskId, { attachments: updatedAttachments });
+    logActivity(taskId, 'ATTACHMENT_ADDED', `Uploaded attachment "${attachment.fileName}"`);
   };
 
   // Remove Attachment from Task
   const removeAttachmentFromTask = async (taskId: string, attachmentId: string) => {
     const task = tasks.find((t) => t.id === taskId);
     if (!task) return;
+    const removedAtt = (task.attachments || []).find((a) => a.id === attachmentId);
     const updatedAttachments = (task.attachments || []).filter((a) => a.id !== attachmentId);
     await updateTask(taskId, { attachments: updatedAttachments });
+    if (removedAtt) {
+      logActivity(taskId, 'UPDATED', `Removed attachment "${removedAtt.fileName}"`);
+    }
   };
 
   // Task CRUD Operations
@@ -551,24 +386,36 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       active: true,
     };
 
-    const project = projects.find((p) => p.id === newTask.projectId);
+    // Ensure resolved emails and details are on newTask
+    newTask.assigneeEmail = assigneeEmail;
+    newTask.assignorId = assignor.id;
+    newTask.assignorEmail = assignorEmail;
+    newTask.assignorName = assignorName;
+    newTask.assignorRole = assignorRole;
 
-    // Trigger Task Assignment Email Notification & Record in State
-    const emailNotif = createAssignmentNotification(newTask, assignee, assignor, project, newTask.attachments);
-    setEmailNotifications((prev) => [emailNotif, ...prev]);
+    const project = projects.find((p) => p.id === newTask.projectId);
 
     // Sync to Google Apps Script / Sheets
     sendAppsScriptAction('createTask', { data: newTask });
 
     logActivity(newTask.id, 'CREATED', `Created task "${newTask.title}"`);
 
+    // Dispatch Task Assignment Notification Email
+    sendTaskAssignmentEmail({
+      task: newTask,
+      project,
+      assignee,
+      assignorName: assignor.name,
+      assignorEmail: assignor.email,
+      assignorRole: assignor.role,
+      isReassignment: false,
+    }).catch((err) => console.warn('Background task assignment email send error:', err));
+
     return newTask;
   };
 
   const updateTask = async (taskId: string, updates: Partial<Task>): Promise<Task | null> => {
     let updatedTask: Task | null = null;
-    let isNewlyCompleted = false;
-    let completedDateStr = '';
 
     const existingTask = tasks.find((t) => t.id === taskId);
     if (existingTask) {
@@ -579,7 +426,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         logActivity(taskId, 'PRIORITY_CHANGE', `Changed priority from "${existingTask.priority}" to "${updates.priority}"`);
       }
       if (updates.assigneeId && updates.assigneeId !== existingTask.assigneeId) {
-        const newM = teamMembers.find((m) => m.id === updates.assigneeId);
+        const newM = findTeamMemberByAssigneeId(updates.assigneeId, teamMembers);
+        if (newM && newM.email) {
+          updates.assigneeEmail = newM.email;
+        }
         logActivity(taskId, 'REASSIGNED', `Reassigned task to ${newM?.name || updates.assigneeId}`);
       }
       if (updates.dueDate && updates.dueDate !== existingTask.dueDate) {
@@ -590,12 +440,6 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const updatedTasks = tasks.map((t) => {
       if (t.id === taskId) {
         if (updates.status === 'Done' && t.status !== 'Done') {
-          isNewlyCompleted = true;
-          completedDateStr = new Date().toLocaleDateString('en-US', {
-            month: 'short',
-            day: 'numeric',
-            year: 'numeric',
-          });
           updates.completedAt = new Date().toISOString();
         }
 
@@ -614,68 +458,28 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setSelectedTask(updatedTask);
     }
 
-    // Trigger Completion Email to Assignor if task marked as Done
-    if (isNewlyCompleted && updatedTask) {
-      const taskObj = updatedTask as Task;
-      const assigneeMember = teamMembers.find((m) => m.id === taskObj.assigneeId || m.email.toLowerCase() === (taskObj.assigneeEmail || '').toLowerCase());
-      const assigneeEmail = taskObj.assigneeEmail || assigneeMember?.email || 'member@deepwoodsgreen.com';
-      const assigneeName = assigneeMember?.name || (assigneeEmail.includes('@') ? assigneeEmail.split('@')[0] : 'Team Member');
-
-      const assignee: TeamMember = assigneeMember || {
-        id: taskObj.assigneeId,
-        name: assigneeName,
-        email: assigneeEmail,
-        role: 'Team Member',
-        color: '#2563EB',
-        active: true,
-      };
-
-      const assignorMember = teamMembers.find(
-        (m) =>
-          (taskObj.assignorId && m.id === taskObj.assignorId) ||
-          (taskObj.assignorEmail && m.email.trim().toLowerCase() === taskObj.assignorEmail.trim().toLowerCase()) ||
-          (taskObj.assignorName && m.name.trim().toLowerCase() === taskObj.assignorName.trim().toLowerCase())
-      );
-
-      const defaultAdminOrLead: TeamMember | undefined = teamMembers.find((m) => m.role === 'Admin' || m.role === 'Product Manager') || teamMembers[0];
-
-      const assignorEmail = taskObj.assignorEmail || assignorMember?.email || defaultAdminOrLead?.email || '';
-      const assignorName = taskObj.assignorName || assignorMember?.name || defaultAdminOrLead?.name || 'Assignor';
-      const assignorRole = taskObj.assignorRole || assignorMember?.role || defaultAdminOrLead?.role || 'Admin';
-      const assignorColor = assignorMember?.color || (defaultAdminOrLead ? defaultAdminOrLead.color : '#06B6D4');
-
-      const assignor: TeamMember = assignorMember || {
-        id: taskObj.assignorId || defaultAdminOrLead?.id || 'tm-assignor',
-        name: assignorName,
-        email: assignorEmail,
-        role: assignorRole,
-        color: assignorColor,
-        active: true,
-      };
-
-      const project = projects.find((p) => p.id === taskObj.projectId);
-
-      const completionEmail = createCompletionNotification(
-        taskObj,
-        assignee,
-        assignor,
-        completedDateStr,
-        project
-      );
-      setEmailNotifications((prev) => {
-        const next = [completionEmail, ...prev];
-        saveEmailNotifications(next);
-        return next;
-      });
-
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new Event('deepwoods_notification_updated'));
-        window.dispatchEvent(new Event('storage'));
-      }
-    }
-
     if (updatedTask) {
       sendAppsScriptAction('updateTask', { data: updatedTask });
+
+      // If task was reassigned to a new user, dispatch reassignment email
+      if (updates.assigneeId && existingTask && updates.assigneeId !== existingTask.assigneeId) {
+        const activeTask: Task = updatedTask || { ...existingTask, ...updates };
+        const newM = findTeamMemberByAssigneeId(updates.assigneeId, teamMembers);
+        const proj = projects.find((p) => p.id === activeTask.projectId);
+        const assignorName = activeTask.assignorName || currentUser?.name || 'Assignor';
+        const assignorEmail = activeTask.assignorEmail || currentUser?.email || '';
+        const assignorRole = activeTask.assignorRole || currentUser?.role || 'Admin';
+
+        sendTaskAssignmentEmail({
+          task: activeTask,
+          project: proj,
+          assignee: newM,
+          assignorName,
+          assignorEmail,
+          assignorRole,
+          isReassignment: true,
+        }).catch((err) => console.warn('Background task reassignment email send error:', err));
+      }
     }
 
     return updatedTask;
@@ -781,12 +585,16 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const addComment = async (taskId: string, authorId: string, text: string): Promise<TaskComment> => {
     const newComment: TaskComment = {
       id: `comm-${Date.now()}`,
-      taskId,
+      taskId: taskId.trim(),
       authorId,
       text,
       createdAt: new Date().toISOString(),
     };
-    setComments((prev) => [...prev, newComment]);
+    setComments((prev) => {
+      const updated = [...prev, newComment];
+      saveCommentsToStorage(updated);
+      return updated;
+    });
     logActivity(taskId, 'COMMENT_ADDED', `Posted comment: "${text.length > 50 ? text.substring(0, 50) + '...' : text}"`);
     sendAppsScriptAction('addComment', { data: newComment });
     return newComment;
@@ -800,7 +608,6 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         teamMembers,
         comments,
         activities,
-        emailNotifications,
         filterOptions,
         selectedProjectId,
         selectedTask,
@@ -817,9 +624,6 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         openTaskDetail,
         closeTaskDetail,
         setFilterOptions,
-        sendDeadlineReminder,
-        markNotificationAsRead,
-        clearNotifications,
         addAttachmentToTask,
         removeAttachmentFromTask,
         createTask,

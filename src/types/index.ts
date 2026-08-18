@@ -63,6 +63,7 @@ export interface TeamMember {
   name: string;
   role: UserRole | string;
   email: string;
+  phone?: string;
   color: string;
   active: boolean;
   password?: string;
@@ -96,23 +97,6 @@ export interface FilterOptions {
   datePreset?: string;
   startDate?: string;
   endDate?: string;
-}
-
-export interface EmailNotification {
-  id: string;
-  type: 'ASSIGNMENT' | 'REMINDER' | 'STATUS_CHANGE' | 'COMPLETION';
-  taskId: string;
-  taskTitle: string;
-  recipientEmail: string;
-  recipientName: string;
-  senderName: string;
-  subject: string;
-  body: string;
-  attachmentsCount: number;
-  attachmentNames: string[];
-  sentAt: string;
-  read: boolean;
-  status: 'SENT' | 'FAILED' | 'PENDING';
 }
 
 export interface SheetsConfig {

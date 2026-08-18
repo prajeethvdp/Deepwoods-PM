@@ -17,6 +17,7 @@ import {
   AlertCircle,
   CircleDot,
   SlidersHorizontal,
+  Paperclip,
 } from 'lucide-react';
 import { isBefore, parseISO, startOfDay, format } from 'date-fns';
 
@@ -284,8 +285,14 @@ export const ListViewPage: React.FC<ListViewPageProps> = ({
                           >
                             {/* Task Name + Project */}
                             <td className="py-3.5 px-5 max-w-xs">
-                              <div className="font-bold text-slate-900 group-hover:text-cyan-600 transition truncate">
-                                {task.title}
+                              <div className="flex items-center gap-1.5 font-bold text-slate-900 group-hover:text-cyan-600 transition truncate">
+                                <span className="truncate">{task.title}</span>
+                                {attachCount > 0 && (
+                                  <span className="inline-flex items-center gap-0.5 text-[10px] text-slate-500 bg-slate-100 border border-slate-200 px-1.5 py-0.5 rounded-none shrink-0 font-medium" title={`${attachCount} attachment(s)`}>
+                                    <Paperclip className="w-3 h-3 text-emerald-600" />
+                                    {attachCount}
+                                  </span>
+                                )}
                               </div>
                               {(() => {
                                 const proj = projects.find((p) => p.id === task.projectId);

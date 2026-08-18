@@ -141,15 +141,29 @@ export async function syncAllWithAppsScript(): Promise<{
     }
     const result = await res.json();
     if (result.success && result.data) {
-      const normalizedTasks = (result.data.tasks || []).map(normalizeTaskDates);
+      const cleanId = (str: any): string => String(str || '').replace(/[\r\n\t]/g, '').trim();
+      const normalizedTasks = (result.data.tasks || []).map((t: any) => ({
+        ...normalizeTaskDates(t),
+        id: cleanId(t.id),
+        projectId: cleanId(t.projectId),
+        assigneeId: cleanId(t.assigneeId),
+        assignorId: cleanId(t.assignorId),
+      }));
       const sortedTasks = sortTasksNewestFirst(normalizedTasks);
+      const normalizedComments = (result.data.comments || []).map((c: any) => ({
+        ...c,
+        id: cleanId(c.id),
+        taskId: cleanId(c.taskId),
+        authorId: cleanId(c.authorId),
+      }));
       saveTasksToStorage(sortedTasks);
       saveProjectsToStorage(result.data.projects || []);
       saveTeamToStorage(result.data.teamMembers || []);
-      saveCommentsToStorage(result.data.comments || []);
+      saveCommentsToStorage(normalizedComments);
       return {
         ...result.data,
         tasks: sortedTasks,
+        comments: normalizedComments,
       };
     }
   } catch {

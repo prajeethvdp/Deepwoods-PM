@@ -73,8 +73,9 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task }) => {
     }
   }
 
+  const cleanId = (str: any): string => String(str || '').replace(/[\r\n\t]/g, '').trim();
   const attachCount = task.attachments?.length || 0;
-  const commentCount = comments.filter((c) => c.taskId === task.id).length;
+  const commentCount = comments.filter((c) => cleanId(c.taskId) === cleanId(task.id)).length;
 
   const handleCheckboxClick = (e: React.MouseEvent) => {
     e.stopPropagation();

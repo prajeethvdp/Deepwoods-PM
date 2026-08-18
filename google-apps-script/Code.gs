@@ -17,7 +17,7 @@ const SHEET_NAMES = {
 };
 
 const HEADERS = {
-  TASKS: ['ID', 'Title', 'Description', 'Project ID', 'Assignee ID', 'Priority', 'Status', 'Start Date', 'Due Date', 'Created At', 'Updated At', 'Assignor ID', 'Assignor Email', 'Assignor Name', 'Assignor Role'],
+  TASKS: ['ID', 'Title', 'Description', 'Project ID', 'Assignee ID', 'Assignee Email', 'Priority', 'Status', 'Start Date', 'Due Date', 'Created At', 'Updated At', 'Assignor ID', 'Assignor Email', 'Assignor Name', 'Assignor Role', 'Attachments'],
   PROJECTS: ['ID', 'Name', 'Client Name', 'Description', 'Color', 'Start Date', 'End Date', 'Status', 'Created At'],
   TEAM: ['ID', 'Name', 'Role', 'Email', 'Color', 'Active', 'Password'],
   COMMENTS: ['ID', 'Task ID', 'Author ID', 'Text', 'Created At'],
@@ -115,79 +115,12 @@ function doPost(e) {
         return appendRow(spreadsheet, SHEET_NAMES.COMMENTS, commentToRow(payload.data));
 
       case 'sendEmail':
-        return handleSendGmailNotification(payload);
+        return handleSendEmail(payload);
 
       default:
         return createJsonResponse({ success: false, error: 'Unknown POST action: ' + action });
     }
   } catch (err) {
-    return createJsonResponse({ success: false, error: err.toString() });
-  }
-}
-
-/**
- * Send Gmail Notification via MailApp & GmailApp with CID Inline Images and Native Attachments
- */
-function handleSendGmailNotification(payload) {
-  try {
-    var recipientEmail = String(payload.recipientEmail || payload.to || '').trim();
-    var subject = String(payload.subject || '').trim();
-    var htmlBody = payload.htmlBody || payload.body || '';
-
-    if (!recipientEmail || !subject || recipientEmail.indexOf('@') === -1) {
-      Logger.log('[SendEmail Error] Invalid recipientEmail: ' + recipientEmail);
-      return createJsonResponse({ success: false, error: 'Invalid recipientEmail: ' + recipientEmail });
-    }
-
-    var mailOptions = {
-      htmlBody: htmlBody,
-      name: payload.senderName || 'Deepwoods Green'
-    };
-
-    if (payload.replyTo) {
-      mailOptions.replyTo = payload.replyTo;
-    }
-
-    // Include logo inline image attachment only if referenced in htmlBody
-    if (htmlBody && htmlBody.indexOf('cid:company_logo') !== -1) {
-      try {
-        var logoBlob = Utilities.newBlob(Utilities.base64Decode(LOGO_BASE64_DATA), 'image/png', 'company_logo.png');
-        mailOptions.inlineImages = {
-          company_logo: logoBlob
-        };
-      } catch (logoErr) {
-        Logger.log('Logo blob conversion error: ' + logoErr);
-      }
-    }
-
-    var sent = false;
-    var lastError = '';
-
-    // Primary: MailApp
-    try {
-      MailApp.sendEmail(recipientEmail, subject, 'Deepwoods Task Notification', mailOptions);
-      sent = true;
-      Logger.log('[SendEmail Success] Sent via MailApp to ' + recipientEmail);
-    } catch (e1) {
-      lastError = e1.toString();
-      Logger.log('[SendEmail MailApp Failed] ' + e1 + ' for ' + recipientEmail);
-      try {
-        GmailApp.sendEmail(recipientEmail, subject, 'Deepwoods Task Notification', mailOptions);
-        sent = true;
-        Logger.log('[SendEmail Success] Sent via GmailApp to ' + recipientEmail);
-      } catch (e2) {
-        lastError = e2.toString();
-        Logger.log('[SendEmail GmailApp Failed] ' + e2 + ' for ' + recipientEmail);
-      }
-    }
-
-    if (sent) {
-      return createJsonResponse({ success: true, message: 'Email sent successfully to ' + recipientEmail });
-    } else {
-      return createJsonResponse({ success: false, error: 'Failed to send email to ' + recipientEmail + ': ' + lastError });
-    }
-  } catch (err) {
-    Logger.log('Gmail send exception: ' + err);
     return createJsonResponse({ success: false, error: err.toString() });
   }
 }
@@ -264,6 +197,11 @@ function applySheetValidationRules(sheet, name) {
   }
 }
 
+function cleanString(val) {
+  if (val === null || val === undefined) return '';
+  return String(val).replace(/[\r\n\t]/g, '').trim();
+}
+
 // Helper: Read sheet rows into JSON objects
 function getSheetData(spreadsheet, sheetName) {
   const sheet = getSheetByNameFlexible(spreadsheet, sheetName);
@@ -276,55 +214,66 @@ function getSheetData(spreadsheet, sheetName) {
 
   return dataRows.map((row) => {
     if (sheetName === SHEET_NAMES.TASKS) {
+      let attachmentsArr = [];
+      if (row[16]) {
+        try {
+          const rawStr = cleanString(row[16]);
+          attachmentsArr = typeof row[16] === 'string' ? JSON.parse(rawStr) : row[16];
+        } catch (e) {
+          attachmentsArr = [];
+        }
+      }
       return {
-        id: String(row[0] || ''),
-        title: String(row[1] || ''),
+        id: cleanString(row[0]),
+        title: String(row[1] || '').trim(),
         description: String(row[2] || ''),
-        projectId: String(row[3] || ''),
-        assigneeId: String(row[4] || ''),
-        priority: String(row[5] || 'Medium'),
-        status: String(row[6] || 'To Do'),
-        startDate: formatDateValue(row[7], timeZone),
-        dueDate: formatDateValue(row[8], timeZone),
-        createdAt: formatDateValue(row[9], timeZone),
-        updatedAt: formatDateValue(row[10], timeZone),
-        assignorId: String(row[11] || ''),
-        assignorEmail: String(row[12] || ''),
-        assignorName: String(row[13] || ''),
-        assignorRole: String(row[14] || ''),
+        projectId: cleanString(row[3]),
+        assigneeId: cleanString(row[4]),
+        assigneeEmail: cleanString(row[5]),
+        priority: cleanString(row[6]) || 'Medium',
+        status: cleanString(row[7]) || 'To Do',
+        startDate: formatDateValue(row[8], timeZone),
+        dueDate: formatDateValue(row[9], timeZone),
+        createdAt: formatDateValue(row[10], timeZone),
+        updatedAt: formatDateValue(row[11], timeZone),
+        assignorId: cleanString(row[12]),
+        assignorEmail: cleanString(row[13]),
+        assignorName: cleanString(row[14]),
+        assignorRole: cleanString(row[15]),
+        attachments: Array.isArray(attachmentsArr) ? attachmentsArr : [],
       };
     }
     if (sheetName === SHEET_NAMES.PROJECTS) {
       return {
-        id: String(row[0] || ''),
-        name: String(row[1] || ''),
-        clientName: String(row[2] || ''),
+        id: cleanString(row[0]),
+        name: String(row[1] || '').trim(),
+        clientName: String(row[2] || '').trim(),
         description: String(row[3] || ''),
-        color: String(row[4] || '#06B6D4'),
+        color: cleanString(row[4]) || '#06B6D4',
         startDate: formatDateValue(row[5], timeZone),
         endDate: formatDateValue(row[6], timeZone),
-        status: String(row[7] || 'Active'),
+        status: cleanString(row[7]) || 'Active',
         createdAt: formatDateValue(row[8], timeZone),
       };
     }
     if (sheetName === SHEET_NAMES.TEAM) {
       return {
-        id: String(row[0] || ''),
-        name: String(row[1] || ''),
-        role: String(row[2] || ''),
-        email: String(row[3] || ''),
-        color: String(row[4] || '#2563EB'),
-        active: String(row[5]).toUpperCase() !== 'FALSE',
-        password: String(row[6] || ''),
+        id: cleanString(row[0]),
+        name: cleanString(row[1]),
+        role: cleanString(row[2]),
+        email: cleanString(row[3]),
+        color: cleanString(row[4]) || '#2563EB',
+        active: cleanString(row[5]).toUpperCase() !== 'FALSE',
+        password: cleanString(row[6]),
       };
     }
     if (sheetName === SHEET_NAMES.COMMENTS) {
       return {
-        id: String(row[0] || ''),
-        taskId: String(row[1] || ''),
-        authorId: String(row[2] || ''),
-        text: String(row[3] || ''),
-        createdAt: formatDateValue(row[4], timeZone),
+        id: cleanString(row[0]),
+        taskId: cleanString(row[1]),
+        authorId: cleanString(row[2]),
+        text: String(row[3] || '').trim(),
+        createdAt: row[4] ? cleanString(row[4]) : new Date().toISOString(),
       };
     }
     return {};
@@ -417,12 +366,21 @@ function deleteRowById(spreadsheet, sheetName, id) {
 }
 
 function taskToRow(task) {
+  let attachmentsStr = '[]';
+  if (task.attachments && Array.isArray(task.attachments)) {
+    try {
+      attachmentsStr = JSON.stringify(task.attachments);
+    } catch (e) {
+      attachmentsStr = '[]';
+    }
+  }
   return [
     task.id || '',
     task.title || '',
     task.description || '',
     task.projectId || '',
     task.assigneeId || '',
+    task.assigneeEmail || '',
     task.priority || 'Medium',
     task.status || 'To Do',
     task.startDate || '',
@@ -433,6 +391,7 @@ function taskToRow(task) {
     task.assignorEmail || '',
     task.assignorName || '',
     task.assignorRole || '',
+    attachmentsStr,
   ];
 }
 
@@ -464,12 +423,78 @@ function teamToRow(team) {
 
 function commentToRow(comm) {
   return [
-    comm.id || '',
-    comm.taskId || '',
-    comm.authorId || '',
+    cleanString(comm.id),
+    cleanString(comm.taskId),
+    cleanString(comm.authorId),
     comm.text || '',
     comm.createdAt || new Date().toISOString(),
   ];
+}
+
+function handleSendEmail(payload) {
+  try {
+    const recipient = payload.recipientEmail || payload.to;
+    if (!recipient) {
+      return createJsonResponse({ success: false, error: 'No recipient email provided' });
+    }
+    const subject = payload.subject || 'Task Assignment Notification';
+    const htmlBody = payload.htmlBody || '';
+    const senderName = payload.senderName || payload.name || 'Deepwoods Green PM';
+    const replyTo = payload.replyTo || payload.assignorEmail || '';
+
+    const options = {
+      name: senderName,
+      htmlBody: htmlBody,
+    };
+    if (replyTo) {
+      options.replyTo = replyTo;
+    }
+
+    // Process file attachments if provided
+    var attachmentsList = [];
+    if (payload.attachments && Array.isArray(payload.attachments)) {
+      for (var i = 0; i < payload.attachments.length; i++) {
+        var att = payload.attachments[i];
+        var fileData = att ? (att.dataUrl || att.fileData) : null;
+        if (fileData) {
+          try {
+            var rawData = String(fileData);
+            var base64Data = rawData.indexOf(',') !== -1 ? rawData.split(',')[1] : rawData;
+            var bytes = Utilities.base64Decode(base64Data);
+            var blob = Utilities.newBlob(bytes, att.fileType || 'application/octet-stream', att.fileName || ('attachment_' + (i + 1)));
+            attachmentsList.push(blob);
+          } catch (attErr) {
+            Logger.log('Attachment processing error: ' + attErr);
+          }
+        }
+      }
+    }
+    if (attachmentsList.length > 0) {
+      options.attachments = attachmentsList;
+    }
+
+    const plainText = 'You have received a task assignment notification from Deepwoods Green PM. Please log in to your dashboard to view details.';
+
+    try {
+      MailApp.sendEmail(recipient, subject, plainText, options);
+    } catch (e1) {
+      GmailApp.sendEmail(recipient, subject, plainText, options);
+    }
+
+    return createJsonResponse({ success: true, message: 'Email sent to ' + recipient });
+  } catch (err) {
+    Logger.log('Email error: ' + err);
+    return createJsonResponse({ success: false, error: err.toString() });
+  }
+}
+
+/**
+ * Run this test function manually ONCE in the Apps Script Editor to trigger and grant MailApp email permissions!
+ */
+function testSendMail() {
+  const email = Session.getActiveUser().getEmail() || 'prajeethv2621@gmail.com';
+  MailApp.sendEmail(email, 'Test Email from Deepwoods PM', 'MailApp email permissions are active and working!');
+  Logger.log('Test email successfully sent to ' + email);
 }
 
 function createJsonResponse(data) {
