@@ -44,7 +44,7 @@ export const Board: React.FC<BoardProps> = ({ openTaskModalWithStatus, isMyTasks
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        distance: 5,
+        distance: 3,
       },
     })
   );
@@ -101,21 +101,21 @@ export const Board: React.FC<BoardProps> = ({ openTaskModalWithStatus, isMyTasks
     if (!over) return;
 
     const taskId = active.id as string;
-    const targetColumn = over.id as TaskStatus;
+    const overId = over.id as string;
 
-    if (KANBAN_COLUMNS.includes(targetColumn)) {
-      const task = tasks.find((t) => t.id === taskId);
-      if (task && task.status !== targetColumn) {
-        updateTaskStatus(taskId, targetColumn);
-      }
+    let targetColumn: TaskStatus | null = null;
+
+    if (KANBAN_COLUMNS.includes(overId as TaskStatus)) {
+      targetColumn = overId as TaskStatus;
     } else {
-      const overTask = tasks.find((t) => t.id === over.id);
+      const overTask = tasks.find((t) => t.id === overId);
       if (overTask && overTask.status) {
-        const task = tasks.find((t) => t.id === taskId);
-        if (task && task.status !== overTask.status) {
-          updateTaskStatus(taskId, overTask.status);
-        }
+        targetColumn = overTask.status;
       }
+    }
+
+    if (targetColumn) {
+      updateTaskStatus(taskId, targetColumn);
     }
   };
 
