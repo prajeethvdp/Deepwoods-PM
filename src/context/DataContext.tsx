@@ -54,7 +54,7 @@ interface DataContextType {
   setFilterOptions: React.Dispatch<React.SetStateAction<FilterOptions>>;
   
   // Notifications & Emails
-  sendDeadlineReminder: (taskId: string, senderUser?: TeamMember) => Promise<boolean>;
+  sendDeadlineReminder: (taskId: string, senderUser?: TeamMember, targetAssignee?: TeamMember) => Promise<boolean>;
   markNotificationAsRead: (id: string) => void;
   clearNotifications: () => void;
   
@@ -413,11 +413,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   // Trigger Deadline Reminder Email
-  const sendDeadlineReminder = async (taskId: string, senderUser?: TeamMember): Promise<boolean> => {
+  const sendDeadlineReminder = async (taskId: string, senderUser?: TeamMember, targetAssignee?: TeamMember): Promise<boolean> => {
     const task = tasks.find((t) => t.id === taskId);
     if (!task) return false;
 
-    let assigneeMember = findTeamMemberByAssigneeId(task.assigneeId, teamMembers, task.assigneeEmail);
+    let assigneeMember = targetAssignee || findTeamMemberByAssigneeId(task.assigneeId, teamMembers, task.assigneeEmail);
 
     let assigneeEmail = (
       assigneeMember?.email ||
