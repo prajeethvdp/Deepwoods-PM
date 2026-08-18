@@ -37,14 +37,12 @@ export function canAccessTeamPage(role?: string): boolean {
 }
 
 /**
- * Task Deletion Permission: Admin/PM can delete any task.
- * Employees can only delete tasks they created or are assigned to.
+ * Task Deletion Permission: Admin and Product Manager only.
+ * Employees cannot delete any tasks.
  */
 export function canDeleteTask(role?: string, task?: Task, currentUserId?: string): boolean {
   const norm = normalizeRole(role);
-  if (norm === 'Admin' || norm === 'Product Manager') return true;
-  if (!task || !currentUserId) return false;
-  return task.assignorId === currentUserId || task.assigneeId === currentUserId;
+  return norm === 'Admin' || norm === 'Product Manager';
 }
 
 /**
