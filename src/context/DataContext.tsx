@@ -489,17 +489,26 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // Robust Assignee & Assignor Resolution
     const assigneeMember = teamMembers.find(
-      (m) => m.id === newTask.assigneeId || m.email.toLowerCase() === (newTask.assigneeEmail || newTask.assigneeId).toLowerCase()
+      (m) =>
+        m.id === newTask.assigneeId ||
+        (newTask.assigneeEmail && m.email.trim().toLowerCase() === newTask.assigneeEmail.trim().toLowerCase()) ||
+        (m.email && m.email.trim().toLowerCase() === newTask.assigneeId.trim().toLowerCase())
     );
 
-    const assigneeEmail = newTask.assigneeEmail || assigneeMember?.email || (newTask.assigneeId.includes('@') ? newTask.assigneeId : 'member@deepwoodsgreen.com');
-    const assigneeName = assigneeMember?.name || (assigneeEmail.includes('@') ? assigneeEmail.split('@')[0] : 'Team Member');
+    const assigneeEmail =
+      assigneeMember?.email ||
+      (newTask.assigneeEmail && newTask.assigneeEmail.includes('@') ? newTask.assigneeEmail : '') ||
+      (newTask.assigneeId.includes('@') ? newTask.assigneeId : '');
+
+    const assigneeName =
+      assigneeMember?.name ||
+      (assigneeEmail.includes('@') ? assigneeEmail.split('@')[0] : 'Team Member');
 
     const assignee: TeamMember = assigneeMember || {
       id: newTask.assigneeId || `tm-${Date.now()}`,
       name: assigneeName,
       email: assigneeEmail,
-      role: 'Team Member',
+      role: 'Employee',
       color: '#2563EB',
       active: true,
     };
