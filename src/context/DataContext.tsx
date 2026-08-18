@@ -417,12 +417,29 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const task = tasks.find((t) => t.id === taskId);
     if (!task) return false;
 
-    const assigneeMember = findTeamMemberByAssigneeId(task.assigneeId, teamMembers, task.assigneeEmail);
+    let assigneeMember = findTeamMemberByAssigneeId(task.assigneeId, teamMembers, task.assigneeEmail);
 
-    const assigneeEmail =
+    let assigneeEmail = (
       assigneeMember?.email ||
       (task.assigneeEmail && task.assigneeEmail.includes('@') ? task.assigneeEmail : '') ||
-      (task.assigneeId && task.assigneeId.includes('@') ? task.assigneeId : '');
+      (task.assigneeId && task.assigneeId.includes('@') ? task.assigneeId : '')
+    ).trim().toLowerCase();
+
+    // Partial match fallback if ID or Email isn't exact
+    if (!assigneeEmail || !assigneeEmail.includes('@')) {
+      const cleanAssigneeId = (task.assigneeId || '').replace(/\s*\([^)]*\)/g, '').trim().toLowerCase();
+      const partialMatch = teamMembers.find(
+        (m) =>
+          m.email &&
+          m.email.includes('@') &&
+          cleanAssigneeId &&
+          (m.name.toLowerCase().includes(cleanAssigneeId) || cleanAssigneeId.includes(m.name.toLowerCase()))
+      );
+      if (partialMatch) {
+        assigneeMember = partialMatch;
+        assigneeEmail = partialMatch.email.trim().toLowerCase();
+      }
+    }
 
     if (!assigneeEmail || !assigneeEmail.includes('@')) {
       alert('Cannot send reminder email: No valid email address found for task assignee.');

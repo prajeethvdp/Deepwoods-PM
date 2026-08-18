@@ -190,18 +190,26 @@ async function dispatchEmailToGmail(
     return;
   }
 
-  const attachmentPayload = (attachments || []).map((att) => ({
-    fileName: att.fileName,
-    fileType: att.fileType,
-    dataUrl: att.dataUrl,
-  }));
+  // Only pass small attachments (< 150KB base64) to avoid Apps Script HTTP POST size limits
+  const attachmentPayload = (attachments || [])
+    .filter((att) => att.dataUrl && att.dataUrl.length < 150000)
+    .map((att) => ({
+      fileName: att.fileName,
+      fileType: att.fileType,
+      dataUrl: att.dataUrl,
+    }));
 
-  sendAppsScriptAction('sendEmail', {
-    recipientEmail: normalizedRecipient,
-    subject,
-    htmlBody: fullHtml,
-    attachments: attachmentPayload,
-  }).catch((err) => console.warn('Gmail dispatch error:', err));
+  try {
+    const sent = await sendAppsScriptAction('sendEmail', {
+      recipientEmail: normalizedRecipient,
+      subject,
+      htmlBody: fullHtml,
+      attachments: attachmentPayload,
+    });
+    console.log(`[Email Dispatch] Email dispatched to ${normalizedRecipient}, status: ${sent}`);
+  } catch (err) {
+    console.warn('Gmail dispatch error:', err);
+  }
 }
 
 // Dynamic Task Assignment Email
