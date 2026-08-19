@@ -22,7 +22,7 @@ import {
 } from 'lucide-react';
 import { useData, saveSentTaskReminder } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
-import { Priority, TaskStatus, TaskAttachment } from '../../types';
+import { Priority, TaskStatus, TaskAttachment, Task } from '../../types';
 import { canDeleteTask, findTeamMemberByAssigneeId } from '../../lib/permissions';
 import { isBefore, startOfDay, formatDistanceToNow, parseISO } from 'date-fns';
 import { toYYYYMMDD, formatDisplayDate } from '../../lib/dateUtils';
@@ -62,6 +62,8 @@ export const DetailPanel: React.FC = () => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isSendingReminder, setIsSendingReminder] = useState(false);
   const [reminderSentMessage, setReminderSentMessage] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
 
   useEffect(() => {
     if (selectedTask) {
@@ -75,11 +77,55 @@ export const DetailPanel: React.FC = () => {
       setStartDate(toYYYYMMDD(selectedTask.startDate));
       setDueDate(toYYYYMMDD(selectedTask.dueDate));
       setShowDeleteConfirm(false);
+      setSaveSuccess(false);
       setActiveTab('details');
     }
   }, [selectedTask?.id]);
 
   if (!isDetailPanelOpen || !selectedTask) return null;
+
+  const isModified = Boolean(
+    title.trim() !== selectedTask.title ||
+    description !== selectedTask.description ||
+    projectId !== selectedTask.projectId ||
+    assigneeId !== selectedTask.assigneeId ||
+    priority !== selectedTask.priority ||
+    status !== selectedTask.status ||
+    startDate !== toYYYYMMDD(selectedTask.startDate) ||
+    dueDate !== toYYYYMMDD(selectedTask.dueDate)
+  );
+
+  const handleSaveChanges = async () => {
+    if (!selectedTask || isSaving) return;
+    setIsSaving(true);
+    try {
+      const updates: Partial<Task> = {
+        title: title.trim(),
+        description,
+        projectId,
+        assigneeId,
+        priority,
+        status,
+        startDate,
+        dueDate,
+      };
+
+      if (assigneeId !== selectedTask.assigneeId) {
+        const matched = findTeamMemberByAssigneeId(assigneeId, teamMembers);
+        if (matched?.email) {
+          updates.assigneeEmail = matched.email;
+        }
+      }
+
+      await updateTask(selectedTask.id, updates);
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 3000);
+    } catch (err) {
+      console.error('Failed to save task updates:', err);
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   const today = startOfDay(new Date());
   const dueYmd = toYYYYMMDD(selectedTask.dueDate);
@@ -233,6 +279,29 @@ export const DetailPanel: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
+            {/* Save Changes Button (Header) */}
+            {(isModified || saveSuccess) && (
+              <button
+                type="button"
+                onClick={handleSaveChanges}
+                disabled={isSaving || (!isModified && !saveSuccess)}
+                className={`flex items-center gap-1.5 text-xs font-extrabold px-3 py-1.5 rounded-none border transition cursor-pointer ${
+                  saveSuccess
+                    ? 'bg-emerald-100 text-emerald-800 border-emerald-400'
+                    : 'bg-emerald-600 hover:bg-emerald-500 text-white border-emerald-500 shadow-sm'
+                }`}
+              >
+                {isSaving ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : saveSuccess ? (
+                  <Check className="w-3.5 h-3.5 text-emerald-700" />
+                ) : (
+                  <Check className="w-3.5 h-3.5" />
+                )}
+                <span>{saveSuccess ? 'Saved!' : isSaving ? 'Saving...' : 'Save Changes'}</span>
+              </button>
+            )}
+
             {!isEmployee && (
               <button
                 onClick={handleSendDeadlineReminder}
@@ -329,6 +398,24 @@ export const DetailPanel: React.FC = () => {
           {/* TAB 1: DETAILS */}
           {activeTab === 'details' && (
             <>
+              {/* Unsaved Changes Banner */}
+              {isModified && (
+                <div className="bg-amber-50 border border-amber-200 px-3.5 py-2.5 flex items-center justify-between gap-2">
+                  <span className="text-xs text-amber-800 font-bold flex items-center gap-1.5">
+                    <AlertCircle className="w-4 h-4 text-amber-600" /> You have unsaved changes
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleSaveChanges}
+                    disabled={isSaving}
+                    className="px-3 py-1 bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs rounded-none transition flex items-center gap-1 cursor-pointer"
+                  >
+                    {isSaving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
+                    <span>{isSaving ? 'Saving...' : 'Save Changes'}</span>
+                  </button>
+                </div>
+              )}
+
               {/* Title Header */}
               <div>
                 {!isEmployee ? (
@@ -620,7 +707,7 @@ export const DetailPanel: React.FC = () => {
                     Attachments ({taskAttachments.length})
                   </label>
 
-                  <label className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-none cursor-pointer transition flex items-center gap-1">
+                  <label className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-none cursor-pointer transition flex items-center gap-1 border border-slate-200">
                     <Paperclip className="w-3 h-3 text-emerald-600" />
                     <span>Upload File</span>
                     <input type="file" multiple onChange={handleFileUpload} className="hidden" />
@@ -657,22 +744,21 @@ export const DetailPanel: React.FC = () => {
                               <Download className="w-3.5 h-3.5" />
                             </a>
                           )}
-                          {(!isEmployee || att.uploadedBy === user?.name) && (
-                            <button
-                              onClick={() => removeAttachmentFromTask(selectedTask.id, att.id)}
-                              className="p-1 text-slate-400 hover:text-rose-600 hover:bg-white rounded-none transition"
-                              title="Delete Attachment"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          )}
+                          <button
+                            type="button"
+                            onClick={() => removeAttachmentFromTask(selectedTask.id, att.id)}
+                            className="p-1.5 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-none transition"
+                            title="Delete Attachment"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
                         </div>
                       </div>
                     ))}
                   </div>
                 ) : (
                   <div className="text-center py-4 bg-slate-50 border border-dashed border-slate-200 rounded-none text-xs text-slate-400">
-                    No files attached yet
+                    No files attached yet. Click "Upload File" to add documents.
                   </div>
                 )}
               </div>
