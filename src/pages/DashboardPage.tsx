@@ -42,8 +42,12 @@ const safeParseDate = (dateStr: string | undefined | null): Date | null => {
   }
 };
 
-export const DashboardPage: React.FC = () => {
-  const { tasks, projects, teamMembers, openTaskDetail, selectedProjectId, filterOptions } = useData();
+export interface DashboardPageProps {
+  onNavigateToProject?: (projectId: string) => void;
+}
+
+export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigateToProject }) => {
+  const { tasks, projects, teamMembers, openTaskDetail, selectedProjectId, setSelectedProjectId, filterOptions } = useData();
   const { user, isEmployee } = useAuth();
   const [dueTab, setDueTab] = useState<'today' | 'week' | 'overdue'>('today');
 
@@ -121,7 +125,6 @@ export const DashboardPage: React.FC = () => {
   });
 
   // 4. Role-Differentiated KPI Stat Calculations
-  // Employees view metrics for tasks assigned to them; Admins/PMs view workspace-wide metrics.
   const relevantTasks = isEmployee && user ? activeTasks.filter((t) => isTaskAssignedToUser(t, user)) : activeTasks;
 
   const totalTasksCount = relevantTasks.length;
@@ -152,7 +155,6 @@ export const DashboardPage: React.FC = () => {
     isEmployee && user ? t.assigneeId === user.id : true
   );
 
-  // Active Due Tasks list based on selected tab
   const activeDueList = dueTab === 'today' ? dueTodayTasks : dueTab === 'week' ? dueThisWeekTasks : overdueTasks;
 
   // 5. Donut Chart Data
@@ -301,19 +303,45 @@ export const DashboardPage: React.FC = () => {
                     ? activeTasks.filter((t) => t.projectId === project.id && isTaskAssignedToUser(t, user))
                     : activeTasks.filter((t) => t.projectId === project.id);
                   const completedCount = projectTasks.filter((t) => t.status === 'Done').length;
+                  const inProgressCount = projectTasks.filter((t) => t.status === 'In Progress').length;
+                  const toDoCount = projectTasks.filter((t) => t.status === 'To Do').length;
+                  const inReviewCount = projectTasks.filter((t) => t.status === 'In Review').length;
                   const progressPct = projectTasks.length > 0 ? Math.round((completedCount / projectTasks.length) * 100) : 0;
 
-                  const assignedMemberIds = new Set(projectTasks.map((t) => t.assigneeId));
-                  const projectTeam = teamMembers.filter((m) => assignedMemberIds.has(m.id));
-                  const displayTeam = projectTeam.length > 0 ? projectTeam : teamMembers;
+                  // Find members working on tasks in this project
+                  const assignedMemberCounts = new Map<string, number>();
+                  projectTasks.forEach((t) => {
+                    if (t.assigneeId) {
+                      assignedMemberCounts.set(t.assigneeId, (assignedMemberCounts.get(t.assigneeId) || 0) + 1);
+                    }
+                  });
+
+                  const workingMembers = teamMembers
+                    .filter((m) => assignedMemberCounts.has(m.id))
+                    .map((m) => ({
+                      ...m,
+                      taskCount: assignedMemberCounts.get(m.id) || 0,
+                    }));
+
+                  const displayTeam = workingMembers.length > 0 ? workingMembers : teamMembers;
 
                   const folderTabColors = ['#84CC16', '#8B5CF6', '#38BDF8', '#EC4899'];
                   const folderTabColor = folderTabColors[idx % folderTabColors.length];
 
+                  const handleProjectClick = () => {
+                    if (onNavigateToProject) {
+                      onNavigateToProject(project.id);
+                    } else {
+                      setSelectedProjectId(project.id);
+                    }
+                  };
+
                   return (
-                    <div key={project.id} className="filter drop-shadow-[0_2px_8px_rgba(0,0,0,0.03)] group">
+                    <div key={project.id} className="relative group filter drop-shadow-[0_2px_8px_rgba(0,0,0,0.03)]">
+                      {/* Project Folder Card */}
                       <div
-                        className="bg-white p-5 flex flex-col justify-between space-y-4 transition-all duration-200 hover:-translate-y-0.5"
+                        onClick={handleProjectClick}
+                        className="bg-white p-5 flex flex-col justify-between space-y-4 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl cursor-pointer group-hover:border-emerald-400 relative"
                         style={{
                           clipPath: 'polygon(0 0, 56% 0, 66% 12px, 100% 12px, 100% 100%, 0 100%)',
                           borderBottomLeftRadius: '16px',
@@ -322,8 +350,13 @@ export const DashboardPage: React.FC = () => {
                         }}
                       >
                         <div className="space-y-3 pt-1">
-                          <div className="w-5 h-5 flex items-center justify-center">
-                            <Folder className="w-5 h-5 fill-current stroke-none" style={{ color: folderTabColor }} />
+                          <div className="flex items-center justify-between">
+                            <div className="w-5 h-5 flex items-center justify-center">
+                              <Folder className="w-5 h-5 fill-current stroke-none" style={{ color: folderTabColor }} />
+                            </div>
+                            <span className="text-[10px] font-extrabold text-emerald-600 opacity-0 group-hover:opacity-100 transition flex items-center gap-0.5">
+                              Open List <ArrowUpRight className="w-3 h-3" />
+                            </span>
                           </div>
 
                           <div>
@@ -335,18 +368,28 @@ export const DashboardPage: React.FC = () => {
                             </p>
                           </div>
 
-                          {/* Real Assigned Member Avatars Stack */}
-                          <div className="flex items-center -space-x-1.5">
-                            {displayTeam.slice(0, 4).map((m, i) => (
-                              <span
-                                key={m.id}
-                                className="w-5 h-5 rounded-full text-[9px] font-bold text-white flex items-center justify-center ring-2 ring-white shrink-0"
-                                style={{ backgroundColor: m.color, zIndex: 10 - i }}
-                                title={m.name}
-                              >
-                                {m.name.charAt(0)}
-                              </span>
-                            ))}
+                          {/* Assigned Member Avatars Stack */}
+                          <div className="flex items-center justify-between pt-1">
+                            <div className="flex items-center -space-x-1.5">
+                              {displayTeam.slice(0, 4).map((m, i) => (
+                                <span
+                                  key={m.id}
+                                  className="w-5.5 h-5.5 rounded-full text-[9px] font-bold text-white flex items-center justify-center ring-2 ring-white shrink-0 shadow-xs"
+                                  style={{ backgroundColor: m.color, zIndex: 10 - i }}
+                                  title={`${m.name} (${'taskCount' in m ? `${m.taskCount} tasks` : m.role})`}
+                                >
+                                  {m.name.charAt(0)}
+                                </span>
+                              ))}
+                              {displayTeam.length > 4 && (
+                                <span className="w-5.5 h-5.5 rounded-full text-[9px] font-bold bg-slate-800 text-white flex items-center justify-center ring-2 ring-white z-0">
+                                  +{displayTeam.length - 4}
+                                </span>
+                              )}
+                            </div>
+                            <span className="text-[10px] font-bold text-slate-400">
+                              {workingMembers.length} {workingMembers.length === 1 ? 'Person' : 'People'}
+                            </span>
                           </div>
                         </div>
 
@@ -363,6 +406,69 @@ export const DashboardPage: React.FC = () => {
                               style={{ width: `${progressPct}%`, backgroundColor: folderTabColor }}
                             />
                           </div>
+                        </div>
+                      </div>
+
+                      {/* Interactive Hover Popover Card */}
+                      <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-3 z-50 w-72 bg-slate-900 text-white p-4 shadow-2xl border border-slate-700/90 rounded-none pointer-events-none opacity-0 group-hover:opacity-100 transition-all duration-200 group-hover:translate-y-0 translate-y-1">
+                        {/* Popover Header */}
+                        <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+                          <div className="truncate pr-2">
+                            <h4 className="font-bold text-xs text-white truncate font-serif">{project.name}</h4>
+                            <span className="text-[10px] text-emerald-400 font-semibold">{project.clientName || 'Deepwoods Project'}</span>
+                          </div>
+                          <span className="px-2 py-0.5 bg-emerald-950 text-emerald-300 text-[10px] font-extrabold border border-emerald-800 shrink-0">
+                            {progressPct}% Done
+                          </span>
+                        </div>
+
+                        {/* Task Summary Badges */}
+                        <div className="grid grid-cols-3 gap-1.5 my-2.5 text-center">
+                          <div className="bg-slate-800/80 p-1.5 border border-slate-700/60">
+                            <span className="text-[9px] text-slate-400 block uppercase font-bold">Total</span>
+                            <span className="text-xs font-black text-white">{projectTasks.length}</span>
+                          </div>
+                          <div className="bg-slate-800/80 p-1.5 border border-slate-700/60">
+                            <span className="text-[9px] text-slate-400 block uppercase font-bold">Done</span>
+                            <span className="text-xs font-black text-emerald-400">{completedCount}</span>
+                          </div>
+                          <div className="bg-slate-800/80 p-1.5 border border-slate-700/60">
+                            <span className="text-[9px] text-slate-400 block uppercase font-bold">Active</span>
+                            <span className="text-xs font-black text-amber-400">{inProgressCount + toDoCount + inReviewCount}</span>
+                          </div>
+                        </div>
+
+                        {/* Team Members List */}
+                        <div className="space-y-1 pt-1 border-t border-slate-800">
+                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                            People Working ({workingMembers.length})
+                          </span>
+                          {workingMembers.length > 0 ? (
+                            <div className="max-h-24 overflow-y-auto space-y-1 pr-1">
+                              {workingMembers.map((m) => (
+                                <div key={m.id} className="flex items-center justify-between text-[11px] bg-slate-800/50 px-2 py-1 border border-slate-700/40">
+                                  <div className="flex items-center gap-1.5 min-w-0">
+                                    <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: m.color }} />
+                                    <span className="font-semibold text-slate-200 truncate">{m.name}</span>
+                                  </div>
+                                  <span className="text-[10px] text-emerald-400 font-bold shrink-0">
+                                    {m.taskCount} {m.taskCount === 1 ? 'task' : 'tasks'}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <span className="text-[10px] text-slate-500 italic block">No assigned members yet</span>
+                          )}
+                        </div>
+
+                        {/* Arrow Down Pointer */}
+                        <div className="absolute top-full left-1/2 -translate-x-1/2 border-x-8 border-x-transparent border-t-8 border-t-slate-900" />
+
+                        {/* Click Notice */}
+                        <div className="mt-2 pt-2 border-t border-slate-800 text-[10px] font-bold text-emerald-400 flex items-center justify-between">
+                          <span>Click to open List View</span>
+                          <ArrowUpRight className="w-3 h-3" />
                         </div>
                       </div>
                     </div>

@@ -56,7 +56,7 @@ const MainApp: React.FC = () => {
   const renderTabContent = () => {
     switch (currentTab) {
       case 'dashboard':
-        return <DashboardPage />;
+        return <DashboardPage onNavigateToProject={navigateToProject} />;
       case 'kanban':
         return (
           <div className="h-full overflow-hidden">
@@ -70,7 +70,7 @@ const MainApp: React.FC = () => {
       case 'calendar':
         return <CalendarView onAddDateTask={(dateStr) => openTaskModalWithStatus('To Do', dateStr)} />;
       case 'my-tasks':
-        return <DashboardPage />;
+        return <DashboardPage onNavigateToProject={navigateToProject} />;
       case 'team':
         return <TeamPage />;
       default:
