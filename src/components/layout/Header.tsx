@@ -8,6 +8,7 @@ import {
   Filter,
   Bell,
   ChevronDown,
+  Sparkles,
 } from 'lucide-react';
 import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
@@ -20,11 +21,13 @@ import { toYYYYMMDD, getDatePresetOptions } from '../../lib/dateUtils';
 interface HeaderProps {
   currentTab: string;
   openNewTaskModal: () => void;
+  onLaunchTour?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
   currentTab,
   openNewTaskModal,
+  onLaunchTour,
 }) => {
   const {
     tasks,
@@ -174,8 +177,20 @@ export const Header: React.FC<HeaderProps> = ({
         )}
       </div>
 
-      {/* Right: Global Actions (Search, Notifications, Filters, Sync, + New Task, Profile) */}
+      {/* Right: Global Actions (Search, Demo Video, Filters, Sync, + New Task, Profile) */}
       <div className="flex items-center gap-1.5 sm:gap-3">
+        {/* Launch Interactive Presentation Video Button */}
+        {onLaunchTour && (
+          <button
+            onClick={onLaunchTour}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-extrabold text-white bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-500 hover:to-teal-500 shadow-md shadow-emerald-200 transition border border-emerald-400/40 animate-pulse shrink-0"
+            title="Watch Interactive Product Presentation"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-yellow-300 fill-yellow-300" />
+            <span className="hidden sm:inline">Client Demo Presentation</span>
+            <span className="sm:hidden">Demo</span>
+          </button>
+        )}
         {/* Search Bar - Hidden on Dashboard, Team Settings, and Docs */}
         {currentTab !== 'dashboard' && currentTab !== 'team' && currentTab !== 'docs' && (
           <div className="relative w-24 sm:w-40 md:w-52">
