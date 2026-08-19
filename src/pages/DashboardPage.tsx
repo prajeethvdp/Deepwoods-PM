@@ -409,66 +409,66 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigateToProjec
                         </div>
                       </div>
 
-                      {/* Interactive Hover Popover Card */}
-                      <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-3 z-50 w-72 bg-slate-900 text-white p-4 shadow-2xl border border-slate-700/90 rounded-none pointer-events-none opacity-0 group-hover:opacity-100 transition-all duration-200 group-hover:translate-y-0 translate-y-1">
+                      {/* Interactive Hover Popover Card (Pops downward, Light Theme) */}
+                      <div className="absolute left-1/2 -translate-x-1/2 top-full mt-2 z-50 w-72 bg-white text-slate-900 p-4 shadow-2xl border border-emerald-300 rounded-none pointer-events-none opacity-0 group-hover:opacity-100 transition-all duration-200 group-hover:translate-y-0 -translate-y-1">
+                        {/* Arrow Pointer Top */}
+                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 border-x-8 border-x-transparent border-b-8 border-b-emerald-400" />
+
                         {/* Popover Header */}
-                        <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+                        <div className="flex items-center justify-between pb-2 border-b border-slate-200 bg-emerald-50/70 -mx-4 -mt-4 p-3 mb-2">
                           <div className="truncate pr-2">
-                            <h4 className="font-bold text-xs text-white truncate font-serif">{project.name}</h4>
-                            <span className="text-[10px] text-emerald-400 font-semibold">{project.clientName || 'Deepwoods Project'}</span>
+                            <h4 className="font-bold text-xs text-slate-900 truncate font-serif">{project.name}</h4>
+                            <span className="text-[10px] text-emerald-700 font-bold">{project.clientName || 'Deepwoods Project'}</span>
                           </div>
-                          <span className="px-2 py-0.5 bg-emerald-950 text-emerald-300 text-[10px] font-extrabold border border-emerald-800 shrink-0">
+                          <span className="px-2 py-0.5 bg-emerald-600 text-white text-[10px] font-extrabold rounded-none shrink-0 shadow-2xs">
                             {progressPct}% Done
                           </span>
                         </div>
 
                         {/* Task Summary Badges */}
                         <div className="grid grid-cols-3 gap-1.5 my-2.5 text-center">
-                          <div className="bg-slate-800/80 p-1.5 border border-slate-700/60">
+                          <div className="bg-slate-50 p-1.5 border border-slate-200">
                             <span className="text-[9px] text-slate-400 block uppercase font-bold">Total</span>
-                            <span className="text-xs font-black text-white">{projectTasks.length}</span>
+                            <span className="text-xs font-black text-slate-900">{projectTasks.length}</span>
                           </div>
-                          <div className="bg-slate-800/80 p-1.5 border border-slate-700/60">
-                            <span className="text-[9px] text-slate-400 block uppercase font-bold">Done</span>
-                            <span className="text-xs font-black text-emerald-400">{completedCount}</span>
+                          <div className="bg-emerald-50/70 p-1.5 border border-emerald-200">
+                            <span className="text-[9px] text-emerald-700 block uppercase font-bold">Done</span>
+                            <span className="text-xs font-black text-emerald-700">{completedCount}</span>
                           </div>
-                          <div className="bg-slate-800/80 p-1.5 border border-slate-700/60">
-                            <span className="text-[9px] text-slate-400 block uppercase font-bold">Active</span>
-                            <span className="text-xs font-black text-amber-400">{inProgressCount + toDoCount + inReviewCount}</span>
+                          <div className="bg-amber-50/70 p-1.5 border border-amber-200">
+                            <span className="text-[9px] text-amber-700 block uppercase font-bold">Active</span>
+                            <span className="text-xs font-black text-amber-700">{inProgressCount + toDoCount + inReviewCount}</span>
                           </div>
                         </div>
 
                         {/* Team Members List */}
-                        <div className="space-y-1 pt-1 border-t border-slate-800">
+                        <div className="space-y-1 pt-1 border-t border-slate-100">
                           <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
                             People Working ({workingMembers.length})
                           </span>
                           {workingMembers.length > 0 ? (
                             <div className="max-h-24 overflow-y-auto space-y-1 pr-1">
                               {workingMembers.map((m) => (
-                                <div key={m.id} className="flex items-center justify-between text-[11px] bg-slate-800/50 px-2 py-1 border border-slate-700/40">
+                                <div key={m.id} className="flex items-center justify-between text-[11px] bg-slate-50 px-2 py-1 border border-slate-200">
                                   <div className="flex items-center gap-1.5 min-w-0">
                                     <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: m.color }} />
-                                    <span className="font-semibold text-slate-200 truncate">{m.name}</span>
+                                    <span className="font-semibold text-slate-800 truncate">{m.name}</span>
                                   </div>
-                                  <span className="text-[10px] text-emerald-400 font-bold shrink-0">
+                                  <span className="text-[10px] text-emerald-700 font-bold shrink-0">
                                     {m.taskCount} {m.taskCount === 1 ? 'task' : 'tasks'}
                                   </span>
                                 </div>
                               ))}
                             </div>
                           ) : (
-                            <span className="text-[10px] text-slate-500 italic block">No assigned members yet</span>
+                            <span className="text-[10px] text-slate-400 italic block">No assigned members yet</span>
                           )}
                         </div>
 
-                        {/* Arrow Down Pointer */}
-                        <div className="absolute top-full left-1/2 -translate-x-1/2 border-x-8 border-x-transparent border-t-8 border-t-slate-900" />
-
                         {/* Click Notice */}
-                        <div className="mt-2 pt-2 border-t border-slate-800 text-[10px] font-bold text-emerald-400 flex items-center justify-between">
+                        <div className="mt-2.5 pt-2 border-t border-slate-100 text-[10px] font-bold text-emerald-700 flex items-center justify-between">
                           <span>Click to open List View</span>
-                          <ArrowUpRight className="w-3 h-3" />
+                          <ArrowUpRight className="w-3.5 h-3.5 text-emerald-600" />
                         </div>
                       </div>
                     </div>
