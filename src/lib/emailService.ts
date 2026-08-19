@@ -9,7 +9,49 @@ interface SendTaskEmailOptions {
   assignorName: string;
   assignorEmail: string;
   assignorRole?: string;
+  assignorPhone?: string;
   isReassignment?: boolean;
+}
+
+function buildEmailSignature({
+  assignorName,
+  assignorRole = 'Admin',
+  assignorEmail = 'prajeethv.deepwoods@gmail.com',
+  assignorPhone = '9876543210',
+}: {
+  assignorName: string;
+  assignorRole?: string;
+  assignorEmail?: string;
+  assignorPhone?: string;
+}): string {
+  const cleanName = assignorName || 'PrajeethvOM';
+  const cleanRole = assignorRole || 'Admin';
+  const cleanEmail = assignorEmail || 'prajeethv.deepwoods@gmail.com';
+  const cleanPhone = assignorPhone || '9876543210';
+
+  return `
+    <div style="margin-top: 32px; padding-top: 16px; border-top: 1px solid #f1f5f9;">
+      <p style="margin: 0 0 4px 0; color: #374151; font-size: 15px;">Best regards,</p>
+      <p style="margin: 0; font-weight: 700; color: #111827; font-size: 15px;">Sustainably Yours<sup>®</sup></p>
+      <p style="margin: 0; font-weight: 700; color: #1f2937; font-size: 14px;">${cleanName}</p>
+      <p style="margin: 0; color: #4b5563; font-size: 13px;">${cleanRole} - Green Initiatives</p>
+      <p style="margin: 0 0 16px 0; color: #4b5563; font-size: 13px;">M: ${cleanPhone}</p>
+
+      <div>
+        <table cellPadding="0" cellSpacing="0" border="0" style="font-family: inherit;">
+          <tr>
+            <td style="padding-bottom: 2px;">
+              <span style="font-size: 18px; font-weight: 800; color: #047857; letter-spacing: 0.5px;">DEEPWOODS</span>
+              <span style="font-size: 18px; font-weight: 800; color: #65a30d; letter-spacing: 0.5px; margin-left: 4px;">GREEN<sup>®</sup></span>
+            </td>
+          </tr>
+        </table>
+        <p style="margin: 2px 0 0 0; font-size: 13px; font-weight: 600; color: #374151;">Deepwoods Green Initiatives Pvt Ltd</p>
+        <p style="margin: 0; font-size: 13px; color: #6b7280;">Indiranagar, Bangalore</p>
+        <p style="margin: 2px 0 0 0; font-size: 13px; color: #059669;">E: <a href="mailto:${cleanEmail}" style="color: #059669; text-decoration: none;">${cleanEmail}</a></p>
+      </div>
+    </div>
+  `;
 }
 
 export async function sendTaskAssignmentEmail({
@@ -19,6 +61,7 @@ export async function sendTaskAssignmentEmail({
   assignorName,
   assignorEmail,
   assignorRole = 'Admin',
+  assignorPhone,
   isReassignment = false,
 }: SendTaskEmailOptions): Promise<boolean> {
   const recipientEmail = (task.assigneeEmail || assignee?.email || '').trim();
@@ -37,6 +80,10 @@ export async function sendTaskAssignmentEmail({
   const formattedDueDate = formatDisplayDate(task.dueDate) || 'Not set';
   const formattedStartDate = formatDisplayDate(task.startDate) || 'Not set';
 
+  const accentColor = '#059669'; // Green accent for assignment
+  const boxBg = '#f8fafc';
+  const borderColor = '#059669';
+
   const htmlBody = `
     <div style="font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif; max-width: 620px; margin: 0; color: #1f2937; line-height: 1.6; font-size: 15px; padding: 12px 0;">
       <p style="margin-top: 0;">Hi <strong>${assigneeFirstName}</strong>,</p>
@@ -47,18 +94,18 @@ export async function sendTaskAssignmentEmail({
         You have been assigned the task <strong>${task.title}</strong> under the <strong>${projectName}</strong> project. Please review the details below and complete the required deliverables prior to the deadline.
       </p>
 
-      <div style="background-color: #f8fafc; border-left: 4px solid #82C341; padding: 20px 24px; border-radius: 8px; margin: 24px 0;">
+      <div style="background-color: ${boxBg}; border-left: 4px solid ${borderColor}; padding: 20px 24px; border-radius: 8px; margin: 24px 0;">
         <h3 style="margin: 0 0 14px 0; font-size: 16px; font-weight: 700; color: #0f172a;">Task Summary: ${task.title}</h3>
         <ol style="margin: 0; padding-left: 20px; color: #334155; font-size: 14px; line-height: 1.8;">
           <li><strong>Project Name</strong>: ${projectName}</li>
           <li><strong>Priority Level</strong>: ${task.priority}</li>
           <li><strong>Start Date</strong>: ${formattedStartDate}</li>
-          <li><strong>Target Deadline</strong>: <span style="color: #82C341; font-weight: 700;">${formattedDueDate}</span></li>
+          <li><strong>Target Deadline</strong>: <span style="color: ${accentColor}; font-weight: 700;">${formattedDueDate}</span></li>
         </ol>
       </div>
 
       <p style="margin-bottom: 24px;">
-        Let's aim to have the initial draft ready by <strong>[${formattedDueDate}]</strong>. Let me know if you have any questions before then.
+        Let's aim to have the initial draft ready by <strong>[${formattedDueDate}]</strong>. Let me know if you have any questions before diving in.
       </p>
 
       ${
@@ -71,6 +118,13 @@ export async function sendTaskAssignmentEmail({
       `
           : ''
       }
+
+      ${buildEmailSignature({
+        assignorName,
+        assignorRole,
+        assignorEmail,
+        assignorPhone: assignorPhone || (assignee as any)?.phone || '9876543210',
+      })}
     </div>
   `;
 
@@ -96,6 +150,7 @@ export async function sendTaskDeadlineReminderEmail({
   assignorName,
   assignorEmail,
   assignorRole = 'Admin',
+  assignorPhone,
 }: SendTaskEmailOptions): Promise<boolean> {
   const recipientEmail = (task.assigneeEmail || assignee?.email || '').trim();
   if (!recipientEmail || !recipientEmail.includes('@')) {
@@ -111,6 +166,10 @@ export async function sendTaskDeadlineReminderEmail({
   const formattedDueDate = formatDisplayDate(task.dueDate) || 'Not set';
   const formattedStartDate = formatDisplayDate(task.startDate) || 'Not set';
 
+  const accentColor = '#ea580c'; // Light Orange / Red accent for reminder
+  const boxBg = '#fff7ed'; // Soft light-orange background tint
+  const borderColor = '#f97316'; // Light Orange / Red left border
+
   const htmlBody = `
     <div style="font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif; max-width: 620px; margin: 0; color: #1f2937; line-height: 1.6; font-size: 15px; padding: 12px 0;">
       <p style="margin-top: 0;">Hi <strong>${assigneeFirstName}</strong>,</p>
@@ -121,13 +180,13 @@ export async function sendTaskDeadlineReminderEmail({
         This is a friendly deadline reminder regarding the task <strong>${task.title}</strong> under the <strong>${projectName}</strong> project. Please review the details below and complete the required deliverables prior to the deadline.
       </p>
 
-      <div style="background-color: #f8fafc; border-left: 4px solid #82C341; padding: 20px 24px; border-radius: 8px; margin: 24px 0;">
+      <div style="background-color: ${boxBg}; border-left: 4px solid ${borderColor}; padding: 20px 24px; border-radius: 8px; margin: 24px 0;">
         <h3 style="margin: 0 0 14px 0; font-size: 16px; font-weight: 700; color: #0f172a;">Task Summary: ${task.title}</h3>
         <ol style="margin: 0; padding-left: 20px; color: #334155; font-size: 14px; line-height: 1.8;">
           <li><strong>Project Name</strong>: ${projectName}</li>
           <li><strong>Priority Level</strong>: ${task.priority}</li>
           <li><strong>Start Date</strong>: ${formattedStartDate}</li>
-          <li><strong>Target Deadline</strong>: <span style="color: #dc2626; font-weight: 700;">${formattedDueDate}</span></li>
+          <li><strong>Target Deadline</strong>: <span style="color: ${accentColor}; font-weight: 700;">${formattedDueDate}</span></li>
         </ol>
       </div>
 
@@ -145,6 +204,13 @@ export async function sendTaskDeadlineReminderEmail({
       `
           : ''
       }
+
+      ${buildEmailSignature({
+        assignorName,
+        assignorRole,
+        assignorEmail,
+        assignorPhone: assignorPhone || (assignee as any)?.phone || '9876543210',
+      })}
     </div>
   `;
 
