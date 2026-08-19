@@ -17,7 +17,6 @@ import { CommandPalette } from './components/common/CommandPalette';
 import { TaskStatus } from './types';
 
 import { BulkActionBar } from './components/common/BulkActionBar';
-import { InteractiveTour } from './components/demo/InteractiveTour';
 
 const MainApp: React.FC = () => {
   const { isAuthenticated } = useAuth();
@@ -43,7 +42,6 @@ const MainApp: React.FC = () => {
   const [taskModalDefaultDate, setTaskModalDefaultDate] = useState<string | undefined>(undefined);
   const [isProjectModalOpen, setIsProjectModalOpen] = useState(false);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
-  const [isTourOpen, setIsTourOpen] = useState(false);
 
   if (!isAuthenticated) {
     return <LoginPage onLoginSuccess={() => setCurrentTab('dashboard')} />;
@@ -101,7 +99,6 @@ const MainApp: React.FC = () => {
         <Header
           currentTab={currentTab}
           openNewTaskModal={() => openTaskModalWithStatus('To Do')}
-          onLaunchTour={() => setIsTourOpen(true)}
         />
 
         {/* Dynamic View Container */}
@@ -133,15 +130,6 @@ const MainApp: React.FC = () => {
         isOpen={isProjectModalOpen}
         onClose={() => setIsProjectModalOpen(false)}
       />
-
-      {/* Interactive Client Presentation Tour */}
-      <InteractiveTour
-        isOpen={isTourOpen}
-        onClose={() => setIsTourOpen(false)}
-        setCurrentTab={setCurrentTab}
-        openNewTaskModal={() => openTaskModalWithStatus('To Do')}
-      />
-
       {/* Floating Bulk Action Bar */}
       <BulkActionBar />
     </div>
