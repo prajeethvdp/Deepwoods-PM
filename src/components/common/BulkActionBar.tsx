@@ -30,12 +30,29 @@ export const BulkActionBar: React.FC = () => {
   const [isApplying, setIsApplying] = useState(false);
 
   const assignableMembers = teamMembers.filter((m) => m.role !== 'Admin');
+  const dateInputRef = React.useRef<HTMLInputElement>(null);
 
   if (selectedTaskIds.length === 0) return null;
 
   const hasPendingChanges = Boolean(
     selectedAssigneeId || selectedStatus || selectedPriority || selectedDueDate
   );
+
+  const handleDatePickerClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (dateInputRef.current) {
+      try {
+        if (typeof dateInputRef.current.showPicker === 'function') {
+          dateInputRef.current.showPicker();
+        } else {
+          dateInputRef.current.focus();
+          dateInputRef.current.click();
+        }
+      } catch (err) {
+        dateInputRef.current.focus();
+      }
+    }
+  };
 
   const handleApplyChanges = async () => {
     if (!hasPendingChanges || isApplying) return;
@@ -152,8 +169,10 @@ export const BulkActionBar: React.FC = () => {
 
       {/* Action 4: Due Date (Admin & PM only) */}
       {!isEmployee && (
-        <div className="relative flex items-center">
-          <label
+        <div className="relative flex items-center gap-1">
+          <button
+            type="button"
+            onClick={handleDatePickerClick}
             className={`text-xs font-medium px-3 py-1.5 rounded-none border cursor-pointer flex items-center gap-1.5 transition ${
               selectedDueDate
                 ? 'bg-emerald-950/80 text-emerald-300 border-emerald-700'
@@ -161,14 +180,25 @@ export const BulkActionBar: React.FC = () => {
             }`}
           >
             <Calendar className="w-3.5 h-3.5 text-emerald-400" />
-            <span>{selectedDueDate || 'Set Due Date'}</span>
-            <input
-              type="date"
-              value={selectedDueDate}
-              onChange={(e) => setSelectedDueDate(e.target.value)}
-              className="absolute inset-0 opacity-0 cursor-pointer"
-            />
-          </label>
+            <span>{selectedDueDate ? `Due: ${selectedDueDate}` : 'Set Due Date'}</span>
+          </button>
+          <input
+            ref={dateInputRef}
+            type="date"
+            value={selectedDueDate}
+            onChange={(e) => setSelectedDueDate(e.target.value)}
+            className="sr-only absolute"
+          />
+          {selectedDueDate && (
+            <button
+              type="button"
+              onClick={() => setSelectedDueDate('')}
+              className="p-1 text-slate-400 hover:text-white hover:bg-slate-800 rounded-none transition"
+              title="Clear date"
+            >
+              <X className="w-3 h-3" />
+            </button>
+          )}
         </div>
       )}
 
