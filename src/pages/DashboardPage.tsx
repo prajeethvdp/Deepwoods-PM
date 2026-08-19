@@ -323,7 +323,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigateToProjec
                       taskCount: assignedMemberCounts.get(m.id) || 0,
                     }));
 
-                  const displayTeam = workingMembers.length > 0 ? workingMembers : teamMembers;
+                  const displayTeam = workingMembers;
 
                   const folderTabColors = ['#84CC16', '#8B5CF6', '#38BDF8', '#EC4899'];
                   const folderTabColor = folderTabColors[idx % folderTabColors.length];
@@ -370,21 +370,27 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigateToProjec
 
                           {/* Assigned Member Avatars Stack */}
                           <div className="flex items-center justify-between pt-1">
-                            <div className="flex items-center -space-x-1.5">
-                              {displayTeam.slice(0, 4).map((m, i) => (
-                                <span
-                                  key={m.id}
-                                  className="w-5.5 h-5.5 rounded-full text-[9px] font-bold text-white flex items-center justify-center ring-2 ring-white shrink-0 shadow-xs"
-                                  style={{ backgroundColor: m.color, zIndex: 10 - i }}
-                                  title={`${m.name} (${'taskCount' in m ? `${m.taskCount} tasks` : m.role})`}
-                                >
-                                  {m.name.charAt(0)}
-                                </span>
-                              ))}
-                              {displayTeam.length > 4 && (
-                                <span className="w-5.5 h-5.5 rounded-full text-[9px] font-bold bg-slate-800 text-white flex items-center justify-center ring-2 ring-white z-0">
-                                  +{displayTeam.length - 4}
-                                </span>
+                            <div className="flex items-center -space-x-1.5 min-h-[22px]">
+                              {displayTeam.length > 0 ? (
+                                <>
+                                  {displayTeam.slice(0, 4).map((m, i) => (
+                                    <span
+                                      key={m.id}
+                                      className="w-5.5 h-5.5 rounded-full text-[9px] font-bold text-white flex items-center justify-center ring-2 ring-white shrink-0 shadow-xs"
+                                      style={{ backgroundColor: m.color, zIndex: 10 - i }}
+                                      title={`${m.name} (${m.taskCount} ${m.taskCount === 1 ? 'task' : 'tasks'})`}
+                                    >
+                                      {m.name.charAt(0)}
+                                    </span>
+                                  ))}
+                                  {displayTeam.length > 4 && (
+                                    <span className="w-5.5 h-5.5 rounded-full text-[9px] font-bold bg-slate-800 text-white flex items-center justify-center ring-2 ring-white z-0">
+                                      +{displayTeam.length - 4}
+                                    </span>
+                                  )}
+                                </>
+                              ) : (
+                                <span className="text-[10px] text-slate-400 italic">Unassigned</span>
                               )}
                             </div>
                             <span className="text-[10px] font-bold text-slate-400">
