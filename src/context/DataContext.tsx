@@ -89,6 +89,27 @@ const defaultFilterOptions: FilterOptions = {
   endDate: '',
 };
 
+const SENT_REMINDERS_STORAGE_KEY = 'deepwoods_sent_task_reminders';
+
+export const getSentTaskReminders = (): Record<string, string> => {
+  try {
+    const raw = localStorage.getItem(SENT_REMINDERS_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+};
+
+export const saveSentTaskReminder = (taskId: string, dateStr: string) => {
+  try {
+    const current = getSentTaskReminders();
+    current[taskId] = dateStr;
+    localStorage.setItem(SENT_REMINDERS_STORAGE_KEY, JSON.stringify(current));
+  } catch (err) {
+    console.warn('[Storage] Failed to save sent task reminder:', err);
+  }
+};
+
 const DataContext = createContext<DataContextType | undefined>(undefined);
 
 const CLEARED_NOTIFS_STORAGE_KEY = 'deepwoods_cleared_notification_ids';
@@ -313,37 +334,38 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }
         }
 
-        // Automated Daily Deadline Reminder Check
-        const todayStr = new Date().toISOString().split('T')[0];
-        const lastAutoCheck = localStorage.getItem('deepwoods_auto_reminder_date');
-        if (lastAutoCheck !== todayStr) {
-          localStorage.setItem('deepwoods_auto_reminder_date', todayStr);
-          const todayObj = startOfDay(new Date());
+        // Automated Daily Deadline Reminder Check (per task, once per calendar day)
+        const todayStr = toYYYYMMDD(new Date());
+        const sentReminders = getSentTaskReminders();
+        const todayObj = startOfDay(new Date());
 
-          sortedTasks.forEach((t) => {
-            if (t.status === 'Done') return;
-            const dueYmd = toYYYYMMDD(t.dueDate);
-            if (!dueYmd) return;
-            const dueObj = startOfDay(new Date(dueYmd));
-            const isDueTodayOrOverdue = isSameDay(dueObj, todayObj) || isBefore(dueObj, todayObj);
+        sortedTasks.forEach((t) => {
+          if (t.status === 'Done') return;
+          const dueYmd = toYYYYMMDD(t.dueDate);
+          if (!dueYmd) return;
+          const dueObj = startOfDay(new Date(dueYmd));
+          const isDueTodayOrOverdue = isSameDay(dueObj, todayObj) || isBefore(dueObj, todayObj);
 
-            if (isDueTodayOrOverdue) {
-              const proj = (syncedData.projects || projects).find((p) => p.id === t.projectId);
-              const assigneeM = findTeamMemberByAssigneeId(t.assigneeId, (syncedData.teamMembers || teamMembers), t.assigneeEmail);
-              const assignorName = t.assignorName || 'Assignor';
-              const assignorEmail = t.assignorEmail || '';
+          if (isDueTodayOrOverdue && sentReminders[t.id] !== todayStr) {
+            // Lock in local storage immediately before network request to prevent duplicate calls
+            saveSentTaskReminder(t.id, todayStr);
+            sentReminders[t.id] = todayStr;
 
-              sendTaskDeadlineReminderEmail({
-                task: t,
-                project: proj,
-                assignee: assigneeM,
-                assignorName,
-                assignorEmail,
-                assignorRole: t.assignorRole || 'Admin',
-              }).catch((err) => console.warn('[AutoReminder] Skipped:', err));
-            }
-          });
-        }
+            const proj = (syncedData.projects || projects).find((p) => p.id === t.projectId);
+            const assigneeM = findTeamMemberByAssigneeId(t.assigneeId, (syncedData.teamMembers || teamMembers), t.assigneeEmail);
+            const assignorName = t.assignorName || 'Assignor';
+            const assignorEmail = t.assignorEmail || '';
+
+            sendTaskDeadlineReminderEmail({
+              task: t,
+              project: proj,
+              assignee: assigneeM,
+              assignorName,
+              assignorEmail,
+              assignorRole: t.assignorRole || 'Admin',
+            }).catch((err) => console.warn('[AutoReminder] Skipped:', err));
+          }
+        });
       }
     } finally {
       setIsSyncing(false);

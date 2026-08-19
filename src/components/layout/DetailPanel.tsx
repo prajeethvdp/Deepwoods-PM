@@ -20,7 +20,7 @@ import {
   UserCheck,
   Loader2,
 } from 'lucide-react';
-import { useData } from '../../context/DataContext';
+import { useData, saveSentTaskReminder } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
 import { Priority, TaskStatus, TaskAttachment } from '../../types';
 import { canDeleteTask, findTeamMemberByAssigneeId } from '../../lib/permissions';
@@ -202,6 +202,7 @@ export const DetailPanel: React.FC = () => {
         assignorEmail,
         assignorRole: selectedTask.assignorRole || user?.role || 'Admin',
       });
+      saveSentTaskReminder(selectedTask.id, toYYYYMMDD(new Date()));
 
       setReminderSentMessage(true);
       setTimeout(() => setReminderSentMessage(false), 3500);
