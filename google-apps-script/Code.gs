@@ -18,7 +18,7 @@ const SHEET_NAMES = {
 
 const HEADERS = {
   TASKS: ['ID', 'Title', 'Description', 'Project ID', 'Assignee ID', 'Assignee Email', 'Priority', 'Status', 'Start Date', 'Due Date', 'Created At', 'Updated At', 'Assignor ID', 'Assignor Email', 'Assignor Name', 'Assignor Role', 'Attachments'],
-  PROJECTS: ['ID', 'Name', 'Client Name', 'Description', 'Color', 'Start Date', 'End Date', 'Status', 'Created At'],
+  PROJECTS: ['ID', 'Name', 'Description', 'Color', 'Start Date', 'End Date', 'Status', 'Created At'],
   TEAM: ['ID', 'Name', 'Role', 'Email', 'Color', 'Active', 'Password'],
   COMMENTS: ['ID', 'Task ID', 'Author ID', 'Text', 'Created At'],
 };
@@ -244,16 +244,23 @@ function getSheetData(spreadsheet, sheetName) {
       };
     }
     if (sheetName === SHEET_NAMES.PROJECTS) {
+      var hasClientCol = row.length >= 9;
+      var descIdx = hasClientCol ? 3 : 2;
+      var colorIdx = hasClientCol ? 4 : 3;
+      var startIdx = hasClientCol ? 5 : 4;
+      var endIdx = hasClientCol ? 6 : 5;
+      var statusIdx = hasClientCol ? 7 : 6;
+      var createdIdx = hasClientCol ? 8 : 7;
+
       return {
         id: cleanString(row[0]),
         name: String(row[1] || '').trim(),
-        clientName: String(row[2] || '').trim(),
-        description: String(row[3] || ''),
-        color: cleanString(row[4]) || '#06B6D4',
-        startDate: formatDateValue(row[5], timeZone),
-        endDate: formatDateValue(row[6], timeZone),
-        status: cleanString(row[7]) || 'Active',
-        createdAt: formatDateValue(row[8], timeZone),
+        description: String(row[descIdx] || ''),
+        color: cleanString(row[colorIdx]) || '#06B6D4',
+        startDate: formatDateValue(row[startIdx], timeZone),
+        endDate: formatDateValue(row[endIdx], timeZone),
+        status: cleanString(row[statusIdx]) || 'Active',
+        createdAt: formatDateValue(row[createdIdx], timeZone),
       };
     }
     if (sheetName === SHEET_NAMES.TEAM) {
@@ -291,8 +298,24 @@ function formatDateValue(val, timeZone) {
 function appendRow(spreadsheet, sheetName, rowValues) {
   const sheet = getSheetByNameFlexible(spreadsheet, sheetName);
   if (!sheet) return createJsonResponse({ success: false, error: 'Sheet not found: ' + sheetName });
-  sheet.appendRow(rowValues);
-  return createJsonResponse({ success: true, message: 'Row appended to ' + sheetName });
+
+  const values = sheet.getDataRange().getValues();
+  let firstEmptyRow = -1;
+  for (let i = 1; i < values.length; i++) {
+    if (!values[i][0] || String(values[i][0]).trim() === '') {
+      firstEmptyRow = i + 1;
+      break;
+    }
+  }
+
+  if (firstEmptyRow !== -1) {
+    const range = sheet.getRange(firstEmptyRow, 1, 1, rowValues.length);
+    range.setValues([rowValues]);
+    return createJsonResponse({ success: true, message: 'Row inserted at position ' + firstEmptyRow + ' in ' + sheetName });
+  } else {
+    sheet.appendRow(rowValues);
+    return createJsonResponse({ success: true, message: 'Row appended to ' + sheetName });
+  }
 }
 
 function updateRowById(spreadsheet, sheetName, id, rowValues) {
@@ -399,7 +422,6 @@ function projectToRow(proj) {
   return [
     proj.id || '',
     proj.name || '',
-    proj.clientName || '',
     proj.description || '',
     proj.color || '#06B6D4',
     proj.startDate || '',
