@@ -359,12 +359,12 @@ export const ListViewPage: React.FC<ListViewPageProps> = ({
                             </td>
 
                             {/* Priority Pill Badge */}
-                            <td className="py-3.5 px-4 whitespace-nowrap">
+                            <td className="py-3.5 px-4 whitespace-nowrap shrink-0">
                               <span
-                                className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold border inline-flex items-center gap-1 ${priorityBadge.bg} ${priorityBadge.text} ${priorityBadge.border}`}
+                                className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold border inline-flex items-center gap-1 whitespace-nowrap shrink-0 ${priorityBadge.bg} ${priorityBadge.text} ${priorityBadge.border}`}
                               >
-                                <Flag className="w-3 h-3 fill-current stroke-none" />
-                                <span>{task.priority}</span>
+                                <Flag className="w-3 h-3 fill-current stroke-none shrink-0" />
+                                <span className="whitespace-nowrap shrink-0">{task.priority}</span>
                               </span>
                             </td>
                           </tr>

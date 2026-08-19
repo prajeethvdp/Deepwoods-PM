@@ -428,15 +428,16 @@ export const DashboardPage: React.FC = () => {
                           <td className="py-3 px-2 text-slate-400 whitespace-nowrap">
                             {task.startDate && task.dueDate ? `${task.startDate} — ${task.dueDate}` : task.dueDate || 'No Deadline'}
                           </td>
-                          <td className="py-3 px-2">
-                            <span className={`px-2.5 py-0.5 rounded-full text-[10px] border font-bold inline-flex items-center gap-1 ${
+                          <td className="py-3 px-2 whitespace-nowrap shrink-0">
+                            <span className={`px-2.5 py-0.5 rounded-full text-[10px] border font-bold inline-flex items-center gap-1 whitespace-nowrap shrink-0 ${
                               priorityText === 'High' || priorityText === 'Urgent'
-                                ? 'border-rose-300 text-rose-600'
+                                ? 'border-rose-300 text-rose-600 bg-rose-50/50'
                                 : priorityText === 'Medium'
-                                ? 'border-amber-300 text-amber-600'
-                                : 'border-blue-300 text-blue-600'
+                                ? 'border-amber-300 text-amber-600 bg-amber-50/50'
+                                : 'border-blue-300 text-blue-600 bg-blue-50/50'
                             }`}>
-                              • {priorityText}
+                              <span className="shrink-0">•</span>
+                              <span className="whitespace-nowrap shrink-0">{priorityText}</span>
                             </span>
                           </td>
                           <td className="py-3 px-2">
