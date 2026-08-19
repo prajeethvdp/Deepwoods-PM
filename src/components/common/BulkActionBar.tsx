@@ -1,12 +1,11 @@
 import React, { useState } from 'react';
 import {
-  CheckSquare,
-  User,
-  AlertCircle,
+  UserCheck,
   Calendar,
   Trash2,
   X,
   ChevronDown,
+  Check,
 } from 'lucide-react';
 import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
@@ -22,38 +21,56 @@ export const BulkActionBar: React.FC = () => {
   } = useData();
 
   const { isEmployee } = useAuth();
+
+  const [selectedAssigneeId, setSelectedAssigneeId] = useState<string>('');
+  const [selectedStatus, setSelectedStatus] = useState<string>('');
+  const [selectedPriority, setSelectedPriority] = useState<string>('');
+  const [selectedDueDate, setSelectedDueDate] = useState<string>('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isApplying, setIsApplying] = useState(false);
+
   const assignableMembers = teamMembers.filter((m) => m.role !== 'Admin');
 
   if (selectedTaskIds.length === 0) return null;
 
-  const handleStatusChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const val = e.target.value;
-    if (!val) return;
-    bulkUpdateTasks(selectedTaskIds, { status: val as TaskStatus });
-  };
+  const hasPendingChanges = Boolean(
+    selectedAssigneeId || selectedStatus || selectedPriority || selectedDueDate
+  );
 
-  const handlePriorityChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const val = e.target.value;
-    if (!val) return;
-    bulkUpdateTasks(selectedTaskIds, { priority: val as Priority });
-  };
+  const handleApplyChanges = async () => {
+    if (!hasPendingChanges || isApplying) return;
+    setIsApplying(true);
 
-  const handleAssigneeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const val = e.target.value;
-    if (!val) return;
-    bulkUpdateTasks(selectedTaskIds, { assigneeId: val });
-  };
+    try {
+      const updates: Record<string, any> = {};
+      if (selectedAssigneeId) updates.assigneeId = selectedAssigneeId;
+      if (selectedStatus) updates.status = selectedStatus as TaskStatus;
+      if (selectedPriority) updates.priority = selectedPriority as Priority;
+      if (selectedDueDate) updates.dueDate = selectedDueDate;
 
-  const handleDueDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value;
-    if (!val) return;
-    bulkUpdateTasks(selectedTaskIds, { dueDate: val });
+      await bulkUpdateTasks(selectedTaskIds, updates);
+
+      // Reset state
+      setSelectedAssigneeId('');
+      setSelectedStatus('');
+      setSelectedPriority('');
+      setSelectedDueDate('');
+    } finally {
+      setIsApplying(false);
+    }
   };
 
   const handleConfirmDelete = () => {
     bulkDeleteTasks(selectedTaskIds);
     setShowDeleteConfirm(false);
+  };
+
+  const handleClearSelection = () => {
+    setSelectedAssigneeId('');
+    setSelectedStatus('');
+    setSelectedPriority('');
+    setSelectedDueDate('');
+    clearTaskSelection();
   };
 
   return (
@@ -72,11 +89,15 @@ export const BulkActionBar: React.FC = () => {
       {!isEmployee && (
         <div className="relative flex items-center">
           <select
-            onChange={handleAssigneeChange}
-            defaultValue=""
-            className="bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium px-3 py-1.5 rounded-none border border-slate-700 focus:outline-none focus:border-emerald-500 cursor-pointer transition appearance-none pr-7"
+            value={selectedAssigneeId}
+            onChange={(e) => setSelectedAssigneeId(e.target.value)}
+            className={`text-xs font-medium px-3 py-1.5 rounded-none border focus:outline-none focus:border-emerald-500 cursor-pointer transition appearance-none pr-7 ${
+              selectedAssigneeId
+                ? 'bg-emerald-950/80 text-emerald-300 border-emerald-700'
+                : 'bg-slate-800 text-slate-200 border-slate-700 hover:bg-slate-700'
+            }`}
           >
-            <option value="" disabled>Reassign To...</option>
+            <option value="">Reassign To...</option>
             {assignableMembers.map((m) => (
               <option key={m.id} value={m.id}>
                 {m.name} ({m.role})
@@ -90,11 +111,15 @@ export const BulkActionBar: React.FC = () => {
       {/* Action 2: Status (Available for all roles) */}
       <div className="relative flex items-center">
         <select
-          onChange={handleStatusChange}
-          defaultValue=""
-          className="bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium px-3 py-1.5 rounded-none border border-slate-700 focus:outline-none focus:border-emerald-500 cursor-pointer transition appearance-none pr-7"
+          value={selectedStatus}
+          onChange={(e) => setSelectedStatus(e.target.value)}
+          className={`text-xs font-medium px-3 py-1.5 rounded-none border focus:outline-none focus:border-emerald-500 cursor-pointer transition appearance-none pr-7 ${
+            selectedStatus
+              ? 'bg-emerald-950/80 text-emerald-300 border-emerald-700'
+              : 'bg-slate-800 text-slate-200 border-slate-700 hover:bg-slate-700'
+          }`}
         >
-          <option value="" disabled>Status...</option>
+          <option value="">Status...</option>
           <option value="To Do">To Do</option>
           <option value="In Progress">In Progress</option>
           <option value="In Review">In Review</option>
@@ -107,11 +132,15 @@ export const BulkActionBar: React.FC = () => {
       {!isEmployee && (
         <div className="relative flex items-center">
           <select
-            onChange={handlePriorityChange}
-            defaultValue=""
-            className="bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium px-3 py-1.5 rounded-none border border-slate-700 focus:outline-none focus:border-emerald-500 cursor-pointer transition appearance-none pr-7"
+            value={selectedPriority}
+            onChange={(e) => setSelectedPriority(e.target.value)}
+            className={`text-xs font-medium px-3 py-1.5 rounded-none border focus:outline-none focus:border-emerald-500 cursor-pointer transition appearance-none pr-7 ${
+              selectedPriority
+                ? 'bg-emerald-950/80 text-emerald-300 border-emerald-700'
+                : 'bg-slate-800 text-slate-200 border-slate-700 hover:bg-slate-700'
+            }`}
           >
-            <option value="" disabled>Priority...</option>
+            <option value="">Priority...</option>
             <option value="Urgent">Urgent</option>
             <option value="High">High</option>
             <option value="Medium">Medium</option>
@@ -124,19 +153,45 @@ export const BulkActionBar: React.FC = () => {
       {/* Action 4: Due Date (Admin & PM only) */}
       {!isEmployee && (
         <div className="relative flex items-center">
-          <label className="bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium px-3 py-1.5 rounded-none border border-slate-700 cursor-pointer flex items-center gap-1.5 transition">
+          <label
+            className={`text-xs font-medium px-3 py-1.5 rounded-none border cursor-pointer flex items-center gap-1.5 transition ${
+              selectedDueDate
+                ? 'bg-emerald-950/80 text-emerald-300 border-emerald-700'
+                : 'bg-slate-800 text-slate-200 border-slate-700 hover:bg-slate-700'
+            }`}
+          >
             <Calendar className="w-3.5 h-3.5 text-emerald-400" />
-            <span>Set Due Date</span>
+            <span>{selectedDueDate || 'Set Due Date'}</span>
             <input
               type="date"
-              onChange={handleDueDateChange}
+              value={selectedDueDate}
+              onChange={(e) => setSelectedDueDate(e.target.value)}
               className="absolute inset-0 opacity-0 cursor-pointer"
             />
           </label>
         </div>
       )}
 
-      {/* Action 5: Delete (Admin & PM only) */}
+      {/* Action 5: Explicit Reassign & Apply Button */}
+      <button
+        type="button"
+        onClick={handleApplyChanges}
+        disabled={!hasPendingChanges || isApplying}
+        className={`px-4 py-1.5 text-xs font-extrabold transition flex items-center gap-1.5 rounded-none border cursor-pointer ${
+          hasPendingChanges
+            ? 'bg-emerald-500 hover:bg-emerald-400 text-slate-950 border-emerald-400 shadow-md shadow-emerald-950/50'
+            : 'bg-slate-800/60 text-slate-500 border-slate-700/60 cursor-not-allowed'
+        }`}
+      >
+        {isApplying ? (
+          <span className="inline-block animate-spin font-sans font-normal">...</span>
+        ) : (
+          <UserCheck className="w-3.5 h-3.5" />
+        )}
+        <span>{selectedAssigneeId ? 'Reassign & Apply' : 'Apply Changes'}</span>
+      </button>
+
+      {/* Action 6: Delete (Admin & PM only) */}
       {!isEmployee && (
         !showDeleteConfirm ? (
           <button
@@ -167,7 +222,7 @@ export const BulkActionBar: React.FC = () => {
 
       {/* Close Selection */}
       <button
-        onClick={clearTaskSelection}
+        onClick={handleClearSelection}
         className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-none transition ml-2 border-l border-slate-700/80 pl-3"
         title="Clear Selection"
       >
@@ -176,3 +231,4 @@ export const BulkActionBar: React.FC = () => {
     </div>
   );
 };
+
