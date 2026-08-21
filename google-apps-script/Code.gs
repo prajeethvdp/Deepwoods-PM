@@ -378,21 +378,55 @@ function deleteRowById(spreadsheet, sheetName, id) {
   const sheet = getSheetByNameFlexible(spreadsheet, sheetName);
   if (!sheet) return createJsonResponse({ success: false, error: 'Sheet not found: ' + sheetName });
 
+  const targetId = String(id || '').replace(/[\r\n\t]/g, '').trim().toLowerCase();
+  if (!targetId) return createJsonResponse({ success: false, error: 'Empty ID' });
+
   const rows = sheet.getDataRange().getValues();
   for (let i = 1; i < rows.length; i++) {
-    if (String(rows[i][0]) === String(id)) {
+    const rowId = String(rows[i][0] || '').replace(/[\r\n\t]/g, '').trim().toLowerCase();
+    if (rowId === targetId) {
       sheet.deleteRow(i + 1);
+      Logger.log('Successfully deleted row ' + (i + 1) + ' with ID (' + targetId + ') from ' + sheetName);
       return createJsonResponse({ success: true, message: 'Row ' + (i + 1) + ' deleted from ' + sheetName });
     }
   }
-  return createJsonResponse({ success: false, error: 'ID not found in ' + sheetName });
+  Logger.log('deleteRowById: ID (' + targetId + ') not found in ' + sheetName);
+  return createJsonResponse({ success: false, error: 'ID not found in ' + sheetName + ': ' + targetId });
 }
 
 function taskToRow(task) {
   let attachmentsStr = '[]';
   if (task.attachments && Array.isArray(task.attachments)) {
     try {
-      attachmentsStr = JSON.stringify(task.attachments);
+      var cleanAtts = task.attachments.map(function(att) {
+        var url = att.dataUrl || '';
+        if (url.length > 25000) {
+          url = url.substring(0, 25000);
+        }
+        return {
+          id: String(att.id || ''),
+          fileName: String(att.fileName || 'Attachment'),
+          fileSize: String(att.fileSize || '0 KB'),
+          fileType: String(att.fileType || 'document'),
+          uploadedAt: String(att.uploadedAt || ''),
+          uploadedBy: String(att.uploadedBy || 'Team Member'),
+          dataUrl: url
+        };
+      });
+      attachmentsStr = JSON.stringify(cleanAtts);
+      if (attachmentsStr.length > 45000) {
+        var minimalAtts = task.attachments.map(function(att) {
+          return {
+            id: String(att.id || ''),
+            fileName: String(att.fileName || 'Attachment'),
+            fileSize: String(att.fileSize || '0 KB'),
+            fileType: String(att.fileType || 'document'),
+            uploadedAt: String(att.uploadedAt || ''),
+            uploadedBy: String(att.uploadedBy || 'Team Member')
+          };
+        });
+        attachmentsStr = JSON.stringify(minimalAtts);
+      }
     } catch (e) {
       attachmentsStr = '[]';
     }
@@ -575,3 +609,196 @@ function setupSheetValidations() {
 
   Logger.log('Google Sheets validation rules applied successfully!');
 }
+
+/**
+ * Automated Daily Deadline Reminder (Run by Google Apps Script Time-driven Trigger)
+ * Can be scheduled to run every morning (e.g. 8:00 AM) automatically without needing the website open.
+ */
+function sendDailyDeadlineReminders() {
+  const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+  ensureSheetsExist(spreadsheet);
+  
+  const tasks = getSheetData(spreadsheet, SHEET_NAMES.TASKS);
+  const projects = getSheetData(spreadsheet, SHEET_NAMES.PROJECTS);
+  const team = getSheetData(spreadsheet, SHEET_NAMES.TEAM);
+  
+  const timeZone = spreadsheet.getSpreadsheetTimeZone() || 'GMT';
+  const todayStr = Utilities.formatDate(new Date(), timeZone, 'yyyy-MM-dd');
+  
+  const scriptProperties = PropertiesService.getScriptProperties();
+  let sentCount = 0;
+
+  // 1. Process Start Date Morning Assignment Emails
+  tasks.forEach(function(t) {
+    if (t.status === 'Done') return;
+    var startYmd = formatDateValue(t.startDate, timeZone);
+    if (!startYmd) return;
+
+    if (startYmd <= todayStr) {
+      var startKey = 'sent_start_email_' + t.id;
+      if (scriptProperties.getProperty(startKey)) {
+        return; // Start email already dispatched for this task
+      }
+
+      var recipient = t.assigneeEmail;
+      if (!recipient && t.assigneeId) {
+        var member = team.find(function(m) { return m.id === t.assigneeId || m.email === t.assigneeId; });
+        if (member) recipient = member.email;
+      }
+
+      if (recipient && recipient.indexOf('@') !== -1) {
+        var proj = projects.find(function(p) { return p.id === t.projectId; });
+        var projName = proj ? proj.name : 'General / Daily Tasks';
+        var subject = 'Action Required: ' + t.title + ' - ' + projName;
+
+        var assigneeFirstName = recipient.split('@')[0];
+        if (t.assigneeId) {
+          var tm = team.find(function(m) { return m.id === t.assigneeId; });
+          if (tm && tm.name) assigneeFirstName = tm.name.split(' ')[0];
+        }
+
+        var assignorName = t.assignorName || 'Assignor';
+        var assignorEmail = t.assignorEmail || '';
+        var assignorRole = t.assignorRole || 'Admin';
+
+        var htmlBody = [
+          '<div style="font-family: \'Trebuchet MS\', Arial, sans-serif; max-width: 620px; margin: 0; color: #1f2937; line-height: 1.6; font-size: 15px; padding: 12px 0;">',
+          '  <p style="margin-top: 0;">Hi <strong>' + assigneeFirstName + '</strong>,</p>',
+          '  <p>I hope you are doing well.</p>',
+          '  <p>You have been assigned the task <strong>' + t.title + '</strong> under the <strong>' + projName + '</strong> project starting today. Please review the details below and complete the required deliverables prior to the deadline.</p>',
+          '  <div style="background-color: #f8fafc; border-left: 4px solid #059669; padding: 20px 24px; border-radius: 8px; margin: 24px 0;">',
+          '    <h3 style="margin: 0 0 14px 0; font-size: 16px; font-weight: 700; color: #0f172a;">Task Summary: ' + t.title + '</h3>',
+          '    <ol style="margin: 0; padding-left: 20px; color: #334155; font-size: 14px; line-height: 1.8;">',
+          '      <li><strong>Project Name</strong>: ' + projName + '</li>',
+          '      <li><strong>Priority Level</strong>: ' + t.priority + '</li>',
+          '      <li><strong>Start Date</strong>: ' + startYmd + '</li>',
+          '      <li><strong>Target Deadline</strong>: <span style="color: #059669; font-weight: 700;">' + (formatDateValue(t.dueDate, timeZone) || 'Not set') + '</span></li>',
+          '    </ol>',
+          '  </div>',
+          t.description ? ('<div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid #e5e5e5;"><span style="font-size: 12px; font-weight: bold; color: #6b7280; text-transform: uppercase; display: block; margin-bottom: 6px;">TASK DESCRIPTION:</span><p style="font-size: 14px; color: #374151; margin: 0; white-space: pre-wrap;">' + t.description + '</p></div>') : '',
+          '  <div style="margin-top: 32px; padding-top: 16px; border-top: 1px solid #f1f5f9;">',
+          '    <p style="margin: 0 0 4px 0; color: #374151; font-size: 15px;">Best regards,</p>',
+          '    <p style="margin: 0; font-weight: 700; color: #111827; font-size: 15px;">Sustainably Yours<sup>®</sup></p>',
+          '    <p style="margin: 0; font-weight: 700; color: #1f2937; font-size: 14px;">' + assignorName + '</p>',
+          '    <p style="margin: 0; color: #4b5563; font-size: 13px;">' + assignorRole + ' - Green Initiatives</p>',
+          '    <p style="margin: 2px 0 0 0; font-size: 13px; font-weight: 600; color: #374151;">Deepwoods Green Initiatives Pvt Ltd</p>',
+          '  </div>',
+          '</div>'
+        ].join('\n');
+
+        handleSendEmail({
+          recipientEmail: recipient,
+          subject: subject,
+          htmlBody: htmlBody,
+          replyTo: assignorEmail,
+          senderName: 'Deepwoods Green',
+          attachments: t.attachments || []
+        });
+
+        scriptProperties.setProperty(startKey, 'true');
+        sentCount++;
+      }
+    }
+  });
+
+  // 2. Process Due Date Morning Deadline Reminders
+  tasks.forEach(function(t) {
+    if (!t.dueDate || t.status === 'Done') return;
+    
+    var dueYmd = formatDateValue(t.dueDate, timeZone);
+    if (!dueYmd) return;
+    
+    if (dueYmd <= todayStr) {
+      var propertyKey = 'sent_reminder_' + t.id + '_' + todayStr;
+      if (scriptProperties.getProperty(propertyKey)) {
+        return; // Already sent today for this task, skip to prevent spam!
+      }
+
+      // Resolve Assignee Email
+      var recipient = t.assigneeEmail;
+      if (!recipient && t.assigneeId) {
+        var member = team.find(function(m) { return m.id === t.assigneeId || m.email === t.assigneeId; });
+        if (member) recipient = member.email;
+      }
+      
+      if (recipient && recipient.indexOf('@') !== -1) {
+        var proj = projects.find(function(p) { return p.id === t.projectId; });
+        var projName = proj ? proj.name : 'General / Daily Tasks';
+        var subject = '⏰ Daily Deadline Reminder: ' + t.title + ' - ' + projName;
+        
+        var assigneeFirstName = recipient.split('@')[0];
+        if (t.assigneeId) {
+          var tm = team.find(function(m) { return m.id === t.assigneeId; });
+          if (tm && tm.name) assigneeFirstName = tm.name.split(' ')[0];
+        }
+        
+        var accentColor = '#ea580c';
+        var boxBg = '#fff7ed';
+        var borderColor = '#f97316';
+        var assignorName = t.assignorName || 'Assignor';
+        var assignorEmail = t.assignorEmail || '';
+        var assignorRole = t.assignorRole || 'Admin';
+        
+        var htmlBody = [
+          '<div style="font-family: \'Trebuchet MS\', Arial, sans-serif; max-width: 620px; margin: 0; color: #1f2937; line-height: 1.6; font-size: 15px; padding: 12px 0;">',
+          '  <p style="margin-top: 0;">Hi <strong>' + assigneeFirstName + '</strong>,</p>',
+          '  <p>This is your automated daily morning deadline reminder regarding the task <strong>' + t.title + '</strong> under the <strong>' + projName + '</strong> project.</p>',
+          '  <div style="background-color: ' + boxBg + '; border-left: 4px solid ' + borderColor + '; padding: 20px 24px; border-radius: 8px; margin: 24px 0;">',
+          '    <h3 style="margin: 0 0 14px 0; font-size: 16px; font-weight: 700; color: #0f172a;">Task Summary: ' + t.title + '</h3>',
+          '    <ol style="margin: 0; padding-left: 20px; color: #334155; font-size: 14px; line-height: 1.8;">',
+          '      <li><strong>Project Name</strong>: ' + projName + '</li>',
+          '      <li><strong>Priority Level</strong>: ' + t.priority + '</li>',
+          '      <li><strong>Start Date</strong>: ' + (formatDateValue(t.startDate, timeZone) || 'Not set') + '</li>',
+          '      <li><strong>Target Deadline</strong>: <span style="color: ' + accentColor + '; font-weight: 700;">' + dueYmd + '</span></li>',
+          '    </ol>',
+          '  </div>',
+          t.description ? ('<div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid #e5e5e5;"><span style="font-size: 12px; font-weight: bold; color: #6b7280; text-transform: uppercase; display: block; margin-bottom: 6px;">TASK DESCRIPTION:</span><p style="font-size: 14px; color: #374151; margin: 0; white-space: pre-wrap;">' + t.description + '</p></div>') : '',
+          '  <div style="margin-top: 32px; padding-top: 16px; border-top: 1px solid #f1f5f9;">',
+          '    <p style="margin: 0 0 4px 0; color: #374151; font-size: 15px;">Best regards,</p>',
+          '    <p style="margin: 0; font-weight: 700; color: #111827; font-size: 15px;">Sustainably Yours<sup>®</sup></p>',
+          '    <p style="margin: 0; font-weight: 700; color: #1f2937; font-size: 14px;">' + assignorName + '</p>',
+          '    <p style="margin: 0; color: #4b5563; font-size: 13px;">' + assignorRole + ' - Green Initiatives</p>',
+          '    <p style="margin: 2px 0 0 0; font-size: 13px; font-weight: 600; color: #374151;">Deepwoods Green Initiatives Pvt Ltd</p>',
+          '  </div>',
+          '</div>'
+        ].join('\n');
+        
+        handleSendEmail({
+          recipientEmail: recipient,
+          subject: subject,
+          htmlBody: htmlBody,
+          replyTo: assignorEmail,
+          senderName: 'Deepwoods Green',
+          attachments: t.attachments || []
+        });
+        
+        scriptProperties.setProperty(propertyKey, 'true');
+        sentCount++;
+      }
+    }
+  });
+  
+  Logger.log('Automated morning task notification check complete. Sent ' + sentCount + ' email(s).');
+}
+
+/**
+ * Creates a daily morning trigger automatically (runs at 8:00 AM daily)
+ * Run this function ONCE in the Apps Script Editor to set up the daily trigger.
+ */
+function createDailyMorningTrigger() {
+  var triggers = ScriptApp.getProjectTriggers();
+  for (var i = 0; i < triggers.length; i++) {
+    if (triggers[i].getHandlerFunction() === 'sendDailyDeadlineReminders') {
+      ScriptApp.deleteTrigger(triggers[i]);
+    }
+  }
+  
+  ScriptApp.newTrigger('sendDailyDeadlineReminders')
+    .timeBased()
+    .everyDays(1)
+    .atHour(8)
+    .create();
+    
+  Logger.log('Successfully created daily morning trigger for 8:00 AM!');
+}
+

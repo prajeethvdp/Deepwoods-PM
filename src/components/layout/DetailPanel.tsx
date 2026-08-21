@@ -20,12 +20,12 @@ import {
   UserCheck,
   Loader2,
 } from 'lucide-react';
-import { useData, saveSentTaskReminder } from '../../context/DataContext';
+import { useData, saveSentTaskReminder, getAttachmentDataUrl } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
 import { Priority, TaskStatus, TaskAttachment, Task } from '../../types';
 import { canDeleteTask, findTeamMemberByAssigneeId } from '../../lib/permissions';
 import { isBefore, startOfDay, formatDistanceToNow, parseISO } from 'date-fns';
-import { toYYYYMMDD, formatDisplayDate } from '../../lib/dateUtils';
+import { toYYYYMMDD, formatDisplayDate, isDeadlineBeforeStartDate } from '../../lib/dateUtils';
 import { sendTaskDeadlineReminderEmail } from '../../lib/emailService';
 
 export const DetailPanel: React.FC = () => {
@@ -41,6 +41,7 @@ export const DetailPanel: React.FC = () => {
     activities,
     addComment,
     addAttachmentToTask,
+    addAttachmentsToTask,
     removeAttachmentFromTask,
   } = useData();
 
@@ -56,6 +57,7 @@ export const DetailPanel: React.FC = () => {
   const [status, setStatus] = useState<TaskStatus>('To Do');
   const [startDate, setStartDate] = useState('');
   const [dueDate, setDueDate] = useState('');
+  const [dateError, setDateError] = useState<string | null>(null);
 
   const [newCommentText, setNewCommentText] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
@@ -76,6 +78,7 @@ export const DetailPanel: React.FC = () => {
       setStatus(selectedTask.status);
       setStartDate(toYYYYMMDD(selectedTask.startDate));
       setDueDate(toYYYYMMDD(selectedTask.dueDate));
+      setDateError(null);
       setShowDeleteConfirm(false);
       setSaveSuccess(false);
       setActiveTab('details');
@@ -95,8 +98,32 @@ export const DetailPanel: React.FC = () => {
     dueDate !== toYYYYMMDD(selectedTask.dueDate)
   );
 
+  const handleStartDateChange = (val: string) => {
+    setStartDate(val);
+    if (isDeadlineBeforeStartDate(val, dueDate)) {
+      setDateError('Target deadline cannot be earlier than the start date.');
+    } else {
+      setDateError(null);
+      handleFieldChange('startDate', val);
+    }
+  };
+
+  const handleDueDateChange = (val: string) => {
+    setDueDate(val);
+    if (isDeadlineBeforeStartDate(startDate, val)) {
+      setDateError('Target deadline cannot be earlier than the start date.');
+    } else {
+      setDateError(null);
+      handleFieldChange('dueDate', val);
+    }
+  };
+
   const handleSaveChanges = async () => {
     if (!selectedTask || isSaving) return;
+    if (isDeadlineBeforeStartDate(startDate, dueDate)) {
+      setDateError('Target deadline cannot be earlier than the start date.');
+      return;
+    }
     setIsSaving(true);
     try {
       const updates: Partial<Task> = {
@@ -119,9 +146,11 @@ export const DetailPanel: React.FC = () => {
 
       await updateTask(selectedTask.id, updates);
       setSaveSuccess(true);
+      setDateError(null);
       setTimeout(() => setSaveSuccess(false), 3000);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to save task updates:', err);
+      setDateError(err?.message || 'Failed to save changes.');
     } finally {
       setIsSaving(false);
     }
@@ -185,27 +214,37 @@ export const DetailPanel: React.FC = () => {
     updateTask(selectedTask.id, { [field]: value });
   };
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
-    Array.from(files).forEach((file) => {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const dataUrl = event.target?.result as string;
-        const newAttachment: TaskAttachment = {
-          id: `att-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
-          fileName: file.name,
-          fileSize: `${(file.size / 1024).toFixed(1)} KB`,
-          fileType: file.type || 'document',
-          dataUrl,
-          uploadedAt: new Date().toISOString(),
-          uploadedBy: user?.name || 'Team Member',
+    const fileArray = Array.from(files);
+    const readPromises = fileArray.map((file) => {
+      return new Promise<TaskAttachment>((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          const dataUrl = event.target?.result as string;
+          resolve({
+            id: `att-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+            fileName: file.name,
+            fileSize: `${(file.size / 1024).toFixed(1)} KB`,
+            fileType: file.type || 'document',
+            dataUrl,
+            uploadedAt: new Date().toISOString(),
+            uploadedBy: user?.name || 'Team Member',
+          });
         };
-        addAttachmentToTask(selectedTask.id, newAttachment);
-      };
-      reader.readAsDataURL(file);
+        reader.readAsDataURL(file);
+      });
     });
+
+    try {
+      const newAttachments = await Promise.all(readPromises);
+      await addAttachmentsToTask(selectedTask.id, newAttachments);
+    } catch (err) {
+      console.warn('Batch file upload error:', err);
+    }
+
     e.target.value = '';
   };
 
@@ -451,6 +490,7 @@ export const DetailPanel: React.FC = () => {
                   <option value="To Do">To Do</option>
                   <option value="In Progress">In Progress</option>
                   <option value="In Review">In Review</option>
+                  <option value="Done">Done</option>
                 </select>
               </div>
 
@@ -543,6 +583,14 @@ export const DetailPanel: React.FC = () => {
                     </select>
                   </div>
 
+                  {/* Validation Error Banner */}
+                  {dateError && (
+                    <div className="col-span-2 bg-rose-50 border border-rose-200 text-rose-800 p-3 rounded-none flex items-center gap-2 text-xs font-semibold animate-in fade-in duration-150">
+                      <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                      <span>{dateError}</span>
+                    </div>
+                  )}
+
                   {/* Start Date */}
                   <div>
                     <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
@@ -551,11 +599,10 @@ export const DetailPanel: React.FC = () => {
                     <input
                       type="date"
                       value={startDate}
-                      onChange={(e) => {
-                        setStartDate(e.target.value);
-                        handleFieldChange('startDate', e.target.value);
-                      }}
-                      className="w-full bg-white border border-slate-200 rounded-none px-2.5 py-1 text-xs font-medium text-slate-800 focus:outline-none focus:border-emerald-600"
+                      onChange={(e) => handleStartDateChange(e.target.value)}
+                      className={`w-full bg-white border rounded-none px-2.5 py-1 text-xs font-medium text-slate-800 focus:outline-none transition ${
+                        dateError ? 'border-rose-400 focus:border-rose-600' : 'border-slate-200 focus:border-emerald-600'
+                      }`}
                     />
                   </div>
 
@@ -567,11 +614,10 @@ export const DetailPanel: React.FC = () => {
                     <input
                       type="date"
                       value={dueDate}
-                      onChange={(e) => {
-                        setDueDate(e.target.value);
-                        handleFieldChange('dueDate', e.target.value);
-                      }}
-                      className="w-full bg-white border border-slate-200 rounded-none px-2.5 py-1 text-xs font-medium text-slate-800 focus:outline-none focus:border-emerald-600"
+                      onChange={(e) => handleDueDateChange(e.target.value)}
+                      className={`w-full bg-white border rounded-none px-2.5 py-1 text-xs font-medium text-slate-800 focus:outline-none transition ${
+                        dateError ? 'border-rose-400 focus:border-rose-600' : 'border-slate-200 focus:border-emerald-600'
+                      }`}
                     />
                   </div>
                 </div>
@@ -716,45 +762,51 @@ export const DetailPanel: React.FC = () => {
 
                 {taskAttachments.length > 0 ? (
                   <div className="space-y-2">
-                    {taskAttachments.map((att) => (
-                      <div
-                        key={att.id}
-                        className="flex items-center justify-between bg-slate-50 p-2.5 border border-slate-200 rounded-none text-xs"
-                      >
-                        <div className="flex items-center gap-2 min-w-0">
-                          <FileText className="w-4 h-4 text-cyan-600 shrink-0" />
-                          <div className="truncate">
-                            <span className="font-semibold text-slate-800 truncate block">
-                              {att.fileName}
-                            </span>
-                            <span className="text-[10px] text-slate-400">
-                              {att.fileSize} • Uploaded by {att.uploadedBy}
-                            </span>
+                    {taskAttachments.map((att) => {
+                      const activeDataUrl = att.dataUrl || getAttachmentDataUrl(att.id);
+                      return (
+                        <div
+                          key={att.id}
+                          className="flex items-center justify-between bg-slate-50 p-2.5 border border-slate-200 rounded-none text-xs group hover:bg-slate-100/80 transition"
+                        >
+                          <div className="flex items-center gap-2 min-w-0">
+                            <FileText className="w-4 h-4 text-cyan-600 shrink-0" />
+                            <div className="truncate">
+                              <span className="font-semibold text-slate-800 truncate block">
+                                {att.fileName}
+                              </span>
+                              <span className="text-[10px] text-slate-400">
+                                {att.fileSize} • Uploaded by {att.uploadedBy}
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2 shrink-0">
+                            {activeDataUrl ? (
+                              <a
+                                href={activeDataUrl}
+                                download={att.fileName}
+                                className="p-1 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 rounded-none transition flex items-center gap-1 font-bold text-[11px] border border-emerald-200 bg-white"
+                                title="Download Attachment"
+                              >
+                                <Download className="w-3.5 h-3.5 text-emerald-600" />
+                                <span>Download</span>
+                              </a>
+                            ) : (
+                              <span className="text-[10px] text-slate-400 italic">No Download Link</span>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => removeAttachmentFromTask(selectedTask.id, att.id || att.fileName)}
+                              className="p-1.5 text-rose-500 hover:text-rose-700 hover:bg-rose-100 rounded-none transition border border-rose-200 bg-white cursor-pointer"
+                              title="Delete Attachment"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
                           </div>
                         </div>
-
-                        <div className="flex items-center gap-2 shrink-0">
-                          {att.dataUrl && (
-                            <a
-                              href={att.dataUrl}
-                              download={att.fileName}
-                              className="p-1 text-slate-500 hover:text-emerald-600 hover:bg-white rounded-none transition"
-                              title="Download Attachment"
-                            >
-                              <Download className="w-3.5 h-3.5" />
-                            </a>
-                          )}
-                          <button
-                            type="button"
-                            onClick={() => removeAttachmentFromTask(selectedTask.id, att.id)}
-                            className="p-1.5 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-none transition"
-                            title="Delete Attachment"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 ) : (
                   <div className="text-center py-4 bg-slate-50 border border-dashed border-slate-200 rounded-none text-xs text-slate-400">

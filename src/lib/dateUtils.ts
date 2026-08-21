@@ -37,6 +37,19 @@ export function toYYYYMMDD(input: any): string {
 }
 
 /**
+ * Validates whether target deadline is strictly earlier than start date.
+ * Returns true if target deadline is invalid (earlier than start date).
+ */
+export function isDeadlineBeforeStartDate(startInput: any, dueInput: any): boolean {
+  const startYmd = toYYYYMMDD(startInput);
+  const dueYmd = toYYYYMMDD(dueInput);
+  if (startYmd && dueYmd && dueYmd < startYmd) {
+    return true;
+  }
+  return false;
+}
+
+/**
  * Formats date for display: e.g. "Aug 12, 2026"
  */
 export function formatDisplayDate(input: any): string {

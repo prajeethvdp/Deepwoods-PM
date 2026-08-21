@@ -6,13 +6,15 @@ import {
   X,
   ChevronDown,
   Check,
+  AlertCircle,
 } from 'lucide-react';
 import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
-import { Priority, TaskStatus } from '../../types';
+import { isDeadlineBeforeStartDate } from '../../lib/dateUtils';
 
 export const BulkActionBar: React.FC = () => {
   const {
+    tasks,
     selectedTaskIds,
     clearTaskSelection,
     bulkUpdateTasks,
@@ -28,6 +30,7 @@ export const BulkActionBar: React.FC = () => {
   const [selectedDueDate, setSelectedDueDate] = useState<string>('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isApplying, setIsApplying] = useState(false);
+  const [bulkError, setBulkError] = useState<string | null>(null);
 
   const assignableMembers = teamMembers.filter((m) => m.role !== 'Admin');
   const dateInputRef = React.useRef<HTMLInputElement>(null);
@@ -56,13 +59,25 @@ export const BulkActionBar: React.FC = () => {
 
   const handleApplyChanges = async () => {
     if (!hasPendingChanges || isApplying) return;
+
+    if (selectedDueDate) {
+      const invalidTask = tasks.find(
+        (t) => selectedTaskIds.includes(t.id) && isDeadlineBeforeStartDate(t.startDate, selectedDueDate)
+      );
+      if (invalidTask) {
+        setBulkError(`Target deadline cannot be earlier than start date for "${invalidTask.title}".`);
+        return;
+      }
+    }
+
+    setBulkError(null);
     setIsApplying(true);
 
     try {
       const updates: Record<string, any> = {};
       if (selectedAssigneeId) updates.assigneeId = selectedAssigneeId;
-      if (selectedStatus) updates.status = selectedStatus as TaskStatus;
-      if (selectedPriority) updates.priority = selectedPriority as Priority;
+      if (selectedStatus) updates.status = selectedStatus;
+      if (selectedPriority) updates.priority = selectedPriority;
       if (selectedDueDate) updates.dueDate = selectedDueDate;
 
       await bulkUpdateTasks(selectedTaskIds, updates);
@@ -72,6 +87,7 @@ export const BulkActionBar: React.FC = () => {
       setSelectedStatus('');
       setSelectedPriority('');
       setSelectedDueDate('');
+      setBulkError(null);
     } finally {
       setIsApplying(false);
     }
@@ -87,11 +103,19 @@ export const BulkActionBar: React.FC = () => {
     setSelectedStatus('');
     setSelectedPriority('');
     setSelectedDueDate('');
+    setBulkError(null);
     clearTaskSelection();
   };
 
   return (
-    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-slate-900 text-white rounded-none shadow-2xl px-5 py-3 border border-slate-700/80 select-none flex flex-wrap items-center gap-3 animate-in fade-in slide-in-from-bottom-5 duration-200">
+    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-slate-900 text-white rounded-none shadow-2xl px-5 py-3 border border-slate-700/80 select-none flex flex-col gap-2 animate-in fade-in slide-in-from-bottom-5 duration-200">
+      {bulkError && (
+        <div className="bg-rose-950/90 border border-rose-700 text-rose-200 px-3 py-1.5 rounded-none text-xs font-semibold flex items-center gap-2">
+          <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
+          <span>{bulkError}</span>
+        </div>
+      )}
+      <div className="flex flex-wrap items-center gap-3">
       {/* Count Indicator */}
       <div className="flex items-center gap-2 pr-3 border-r border-slate-700/80">
         <div className="w-6 h-6 rounded-none bg-emerald-500 text-slate-950 font-black text-xs flex items-center justify-center">
@@ -258,6 +282,7 @@ export const BulkActionBar: React.FC = () => {
       >
         <X className="w-4 h-4" />
       </button>
+      </div>
     </div>
   );
 };

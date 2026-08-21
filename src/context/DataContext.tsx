@@ -18,9 +18,9 @@ import {
 } from '../lib/sheets';
 import { isTaskAssignedToUser, matchesAssigneeFilter, normalizeRole, findTeamMemberByAssigneeId } from '../lib/permissions';
 import { useAuth } from './AuthContext';
-import { sendTaskAssignmentEmail, sendTaskDeadlineReminderEmail } from '../lib/emailService';
 import { isBefore, isSameDay, startOfDay } from 'date-fns';
-import { toYYYYMMDD } from '../lib/dateUtils';
+import { isDeadlineBeforeStartDate } from '../lib/dateUtils';
+import { sendTaskAssignmentEmail } from '../lib/emailService';
 import { GENERAL_PROJECT } from '../lib/constants';
 
 interface DataContextType {
@@ -49,8 +49,9 @@ interface DataContextType {
   setFilterOptions: React.Dispatch<React.SetStateAction<FilterOptions>>;
   // Attachments
   addAttachmentToTask: (taskId: string, attachment: TaskAttachment) => Promise<void>;
+  addAttachmentsToTask: (taskId: string, attachments: TaskAttachment[]) => Promise<void>;
   removeAttachmentFromTask: (taskId: string, attachmentId: string) => Promise<void>;
-  
+
   // Task CRUD & Bulk
   createTask: (taskData: Omit<Task, 'id' | 'createdAt' | 'updatedAt'>) => Promise<Task>;
   updateTask: (taskId: string, updates: Partial<Task>) => Promise<Task | null>;
@@ -113,6 +114,8 @@ export const saveSentTaskReminder = (taskId: string, dateStr: string) => {
 const DataContext = createContext<DataContextType | undefined>(undefined);
 
 const CLEARED_NOTIFS_STORAGE_KEY = 'deepwoods_cleared_notification_ids';
+const DELETED_ATT_STORAGE_KEY = 'deepwoods_deleted_attachment_ids';
+const DELETED_TASKS_STORAGE_KEY = 'deepwoods_deleted_task_ids';
 
 const getClearedNotificationIds = (): Set<string> => {
   try {
@@ -125,6 +128,61 @@ const getClearedNotificationIds = (): Set<string> => {
 
 const saveClearedNotificationIds = (set: Set<string>) => {
   localStorage.setItem(CLEARED_NOTIFS_STORAGE_KEY, JSON.stringify(Array.from(set)));
+};
+
+const getDeletedTaskIds = (): Set<string> => {
+  try {
+    const raw = localStorage.getItem(DELETED_TASKS_STORAGE_KEY);
+    return raw ? new Set(JSON.parse(raw)) : new Set();
+  } catch {
+    return new Set();
+  }
+};
+
+const recordDeletedTaskId = (id: string) => {
+  if (!id) return;
+  try {
+    const set = getDeletedTaskIds();
+    set.add(id.trim());
+    localStorage.setItem(DELETED_TASKS_STORAGE_KEY, JSON.stringify(Array.from(set)));
+  } catch {}
+};
+
+const getDeletedAttachmentIds = (): Set<string> => {
+  try {
+    const raw = localStorage.getItem(DELETED_ATT_STORAGE_KEY);
+    return raw ? new Set(JSON.parse(raw)) : new Set();
+  } catch {
+    return new Set();
+  }
+};
+
+const recordDeletedAttachmentId = (id: string) => {
+  try {
+    const set = getDeletedAttachmentIds();
+    set.add(id);
+    localStorage.setItem(DELETED_ATT_STORAGE_KEY, JSON.stringify(Array.from(set)));
+  } catch {}
+};
+
+const ATT_DATA_PREFIX = 'deepwoods_att_data_';
+
+export const saveAttachmentDataUrl = (id: string, dataUrl: string) => {
+  if (!id || !dataUrl) return;
+  try {
+    localStorage.setItem(`${ATT_DATA_PREFIX}${id}`, dataUrl);
+  } catch (e) {
+    console.warn('[AttachmentStorage] LocalStorage quota exceeded, preserving in memory:', e);
+  }
+};
+
+export const getAttachmentDataUrl = (id: string): string => {
+  if (!id) return '';
+  try {
+    return localStorage.getItem(`${ATT_DATA_PREFIX}${id}`) || '';
+  } catch {
+    return '';
+  }
 };
 
 export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -245,20 +303,6 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setSelectedTaskIds([]);
   };
 
-  const bulkUpdateTasks = async (taskIds: string[], updates: Partial<Task>): Promise<void> => {
-    if (taskIds.length === 0) return;
-    for (const id of taskIds) {
-      await updateTask(id, updates);
-    }
-    setSelectedTaskIds([]);
-  };
-
-  const bulkDeleteTasks = async (taskIds: string[]): Promise<void> => {
-    if (taskIds.length === 0) return;
-    setTasks((prev) => prev.filter((t) => !taskIds.includes(t.id)));
-    setSelectedTaskIds([]);
-  };
-
   const openTaskDetail = (task: Task) => {
     setSelectedTask(task);
     setIsDetailPanelOpen(true);
@@ -268,25 +312,74 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsDetailPanelOpen(false);
   };
 
+const mergeTaskAttachments = (syncedAtts: TaskAttachment[] = [], localAtts: TaskAttachment[] = []): TaskAttachment[] => {
+  const deletedIds = getDeletedAttachmentIds();
+  const attMap = new Map<string, TaskAttachment>();
+
+  (localAtts || []).forEach((att) => {
+    if (!att || !att.id || deletedIds.has(att.id)) return;
+    const cachedUrl = getAttachmentDataUrl(att.id);
+    const bestUrl = att.dataUrl || cachedUrl || '';
+    if (bestUrl) saveAttachmentDataUrl(att.id, bestUrl);
+    attMap.set(att.id, {
+      ...att,
+      dataUrl: bestUrl,
+    });
+  });
+
+  (syncedAtts || []).forEach((att) => {
+    if (!att || !att.id || deletedIds.has(att.id)) return;
+    const cachedUrl = getAttachmentDataUrl(att.id);
+    const bestUrl = att.dataUrl || cachedUrl || '';
+    if (bestUrl) saveAttachmentDataUrl(att.id, bestUrl);
+
+    if (!attMap.has(att.id)) {
+      attMap.set(att.id, {
+        ...att,
+        dataUrl: bestUrl,
+      });
+    } else {
+      const localAtt = attMap.get(att.id)!;
+      const combinedUrl = localAtt.dataUrl || bestUrl || '';
+      if (combinedUrl) saveAttachmentDataUrl(att.id, combinedUrl);
+      attMap.set(att.id, {
+        ...att,
+        ...localAtt,
+        dataUrl: combinedUrl,
+      });
+    }
+  });
+
+  return Array.from(attMap.values());
+};
+
   const syncWithGoogleSheets = async () => {
     setIsSyncing(true);
     try {
       const syncedData = await syncAllWithAppsScript();
       if (syncedData) {
-        const localTasks = loadTasksFromStorage();
+        const deletedTaskIds = getDeletedTaskIds();
+        const localTasks = loadTasksFromStorage().filter((lt) => lt.id && !deletedTaskIds.has(lt.id.trim()));
         const mergedTasksMap = new Map<string, Task>();
+
         (syncedData.tasks || []).forEach((st) => {
-          if (st.id) mergedTasksMap.set(st.id, st);
+          if (st.id && !deletedTaskIds.has(st.id.trim())) {
+            mergedTasksMap.set(st.id.trim(), st);
+          }
         });
+
         localTasks.forEach((lt) => {
-          if (!lt.id) return;
-          if (!mergedTasksMap.has(lt.id)) {
-            mergedTasksMap.set(lt.id, lt);
+          if (!lt.id || deletedTaskIds.has(lt.id.trim())) return;
+          const cleanId = lt.id.trim();
+          if (!mergedTasksMap.has(cleanId)) {
+            mergedTasksMap.set(cleanId, lt);
           } else {
-            const st = mergedTasksMap.get(lt.id)!;
-            if ((!st.attachments || st.attachments.length === 0) && lt.attachments && lt.attachments.length > 0) {
-              mergedTasksMap.set(lt.id, { ...st, attachments: lt.attachments });
-            }
+            const st = mergedTasksMap.get(cleanId)!;
+            const mergedAttachments = mergeTaskAttachments(st.attachments, lt.attachments);
+            mergedTasksMap.set(cleanId, {
+              ...st,
+              attachments: mergedAttachments,
+            });
           }
         });
         const mergedTasks = Array.from(mergedTasksMap.values());
@@ -333,61 +426,96 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setSelectedTask(currentSelected);
           }
         }
-
-        // Automated Daily Deadline Reminder Check (per task, once per calendar day)
-        const todayStr = toYYYYMMDD(new Date());
-        const sentReminders = getSentTaskReminders();
-        const todayObj = startOfDay(new Date());
-
-        sortedTasks.forEach((t) => {
-          if (t.status === 'Done') return;
-          const dueYmd = toYYYYMMDD(t.dueDate);
-          if (!dueYmd) return;
-          const dueObj = startOfDay(new Date(dueYmd));
-          const isDueTodayOrOverdue = isSameDay(dueObj, todayObj) || isBefore(dueObj, todayObj);
-
-          if (isDueTodayOrOverdue && sentReminders[t.id] !== todayStr) {
-            // Lock in local storage immediately before network request to prevent duplicate calls
-            saveSentTaskReminder(t.id, todayStr);
-            sentReminders[t.id] = todayStr;
-
-            const proj = (syncedData.projects || projects).find((p) => p.id === t.projectId);
-            const assigneeM = findTeamMemberByAssigneeId(t.assigneeId, (syncedData.teamMembers || teamMembers), t.assigneeEmail);
-            const assignorName = t.assignorName || 'Assignor';
-            const assignorEmail = t.assignorEmail || '';
-
-            sendTaskDeadlineReminderEmail({
-              task: t,
-              project: proj,
-              assignee: assigneeM,
-              assignorName,
-              assignorEmail,
-              assignorRole: t.assignorRole || 'Admin',
-            }).catch((err) => console.warn('[AutoReminder] Skipped:', err));
-          }
-        });
       }
     } finally {
       setIsSyncing(false);
     }
   };
 
-  // Add Attachment to Task
+  // Add Multiple Attachments to Task safely
+  const addAttachmentsToTask = async (taskId: string, newAttachments: TaskAttachment[]) => {
+    if (!newAttachments || newAttachments.length === 0) return;
+
+    // Cache Data URLs immediately in local storage to prevent any data URL loss
+    newAttachments.forEach((a) => {
+      if (a.id && a.dataUrl) {
+        saveAttachmentDataUrl(a.id, a.dataUrl);
+      }
+    });
+
+    const targetTask = tasks.find((t) => t.id === taskId);
+    if (!targetTask) return;
+
+    const currentAtts = targetTask.attachments || [];
+    const attMap = new Map<string, TaskAttachment>();
+    currentAtts.forEach((a) => attMap.set(a.id || a.fileName, a));
+    newAttachments.forEach((a) => attMap.set(a.id || a.fileName, a));
+    const merged = Array.from(attMap.values());
+
+    const updatedTaskObj: Task = {
+      ...targetTask,
+      attachments: merged,
+      updatedAt: new Date().toISOString(),
+    };
+
+    setTasks((prevTasks) => {
+      const updated = prevTasks.map((t) => (t.id === taskId ? updatedTaskObj : t));
+      saveTasksToStorage(updated);
+      return updated;
+    });
+
+    if (selectedTask?.id === taskId) {
+      setSelectedTask(updatedTaskObj);
+    }
+
+    sendAppsScriptAction('updateTask', { data: updatedTaskObj });
+    const names = newAttachments.map((a) => a.fileName).join(', ');
+    logActivity(taskId, 'ATTACHMENT_ADDED', `Uploaded attachment(s): ${names}`);
+  };
+
   const addAttachmentToTask = async (taskId: string, attachment: TaskAttachment) => {
-    const task = tasks.find((t) => t.id === taskId);
-    if (!task) return;
-    const updatedAttachments = [...(task.attachments || []), attachment];
-    await updateTask(taskId, { attachments: updatedAttachments });
-    logActivity(taskId, 'ATTACHMENT_ADDED', `Uploaded attachment "${attachment.fileName}"`);
+    await addAttachmentsToTask(taskId, [attachment]);
   };
 
   // Remove Attachment from Task
-  const removeAttachmentFromTask = async (taskId: string, attachmentId: string) => {
-    const task = tasks.find((t) => t.id === taskId);
-    if (!task) return;
-    const removedAtt = (task.attachments || []).find((a) => a.id === attachmentId);
-    const updatedAttachments = (task.attachments || []).filter((a) => a.id !== attachmentId);
-    await updateTask(taskId, { attachments: updatedAttachments });
+  const removeAttachmentFromTask = async (taskId: string, attachmentIdOrName: string) => {
+    const targetTask = tasks.find((t) => t.id === taskId);
+    if (!targetTask) return;
+
+    const currentAtts = targetTask.attachments || [];
+    const removedAtt = currentAtts.find(
+      (a) => a.id === attachmentIdOrName || a.fileName === attachmentIdOrName
+    );
+
+    if (removedAtt && removedAtt.id) {
+      recordDeletedAttachmentId(removedAtt.id);
+    }
+    if (attachmentIdOrName) {
+      recordDeletedAttachmentId(attachmentIdOrName);
+    }
+
+    const updatedAttachments = currentAtts.filter(
+      (a) => a.id !== attachmentIdOrName && a.fileName !== attachmentIdOrName
+    );
+
+    const updatedTaskObj: Task = {
+      ...targetTask,
+      attachments: updatedAttachments,
+      updatedAt: new Date().toISOString(),
+    };
+
+    setTasks((prevTasks) => {
+      const updated = prevTasks.map((t) => (t.id === taskId ? updatedTaskObj : t));
+      saveTasksToStorage(updated);
+      return updated;
+    });
+
+    if (selectedTask?.id === taskId) {
+      setSelectedTask(updatedTaskObj);
+    }
+
+    sendAppsScriptAction('updateTask', { data: updatedTaskObj });
+
     if (removedAtt) {
       logActivity(taskId, 'UPDATED', `Removed attachment "${removedAtt.fileName}"`);
     }
@@ -395,6 +523,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Task CRUD Operations
   const createTask = async (taskData: Omit<Task, 'id' | 'createdAt' | 'updatedAt'>): Promise<Task> => {
+    if (isDeadlineBeforeStartDate(taskData.startDate, taskData.dueDate)) {
+      throw new Error('Target deadline cannot be earlier than the start date.');
+    }
+
     const newTask: Task = {
       ...taskData,
       id: `task-${Date.now()}`,
@@ -468,7 +600,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     logActivity(newTask.id, 'CREATED', `Created task "${newTask.title}"`);
 
-    // Dispatch Task Assignment Notification Email
+    // Dispatch immediate Task Assignment Email upon creation
     sendTaskAssignmentEmail({
       task: newTask,
       project,
@@ -487,6 +619,12 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const existingTask = tasks.find((t) => t.id === taskId);
     if (existingTask) {
+      const finalStart = updates.startDate !== undefined ? updates.startDate : existingTask.startDate;
+      const finalDue = updates.dueDate !== undefined ? updates.dueDate : existingTask.dueDate;
+      if (isDeadlineBeforeStartDate(finalStart, finalDue)) {
+        console.warn('[DataContext] Task update rejected: Target deadline cannot be earlier than start date.');
+        return null;
+      }
       if (updates.status && updates.status !== existingTask.status) {
         logActivity(taskId, 'STATUS_CHANGE', `Changed status from "${existingTask.status}" to "${updates.status}"`);
       }
@@ -558,13 +696,68 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const deleteTask = async (taskId: string): Promise<boolean> => {
-    setTasks((prev) => prev.filter((t) => t.id !== taskId));
-    if (selectedTask?.id === taskId) {
+    if (!taskId) return false;
+    const cleanId = taskId.trim();
+    recordDeletedTaskId(cleanId);
+
+    setTasks((prev) => {
+      const updated = prev.filter((t) => t.id && t.id.trim() !== cleanId);
+      saveTasksToStorage(updated);
+      return updated;
+    });
+
+    if (selectedTask?.id && selectedTask.id.trim() === cleanId) {
       setIsDetailPanelOpen(false);
       setSelectedTask(null);
     }
-    sendAppsScriptAction('deleteTask', { id: taskId });
+
+    sendAppsScriptAction('deleteTask', { id: cleanId });
     return true;
+  };
+
+  const bulkUpdateTasks = async (taskIds: string[], updates: Partial<Task>) => {
+    if (!taskIds || taskIds.length === 0) return;
+    const cleanIds = taskIds.map((id) => id.trim());
+
+    setTasks((prev) => {
+      const updated = prev.map((t) => {
+        if (t.id && cleanIds.includes(t.id.trim())) {
+          return { ...t, ...updates, updatedAt: new Date().toISOString() };
+        }
+        return t;
+      });
+      saveTasksToStorage(updated);
+      return updated;
+    });
+
+    cleanIds.forEach((id) => {
+      const existing = tasks.find((t) => t.id && t.id.trim() === id);
+      if (existing) {
+        sendAppsScriptAction('updateTask', { data: { ...existing, ...updates } });
+      }
+    });
+  };
+
+  const bulkDeleteTasks = async (taskIds: string[]) => {
+    if (!taskIds || taskIds.length === 0) return;
+    const cleanIds = taskIds.map((id) => id.trim());
+    cleanIds.forEach((id) => recordDeletedTaskId(id));
+
+    setTasks((prev) => {
+      const updated = prev.filter((t) => !t.id || !cleanIds.includes(t.id.trim()));
+      saveTasksToStorage(updated);
+      return updated;
+    });
+
+    if (selectedTask && cleanIds.includes(selectedTask.id.trim())) {
+      setIsDetailPanelOpen(false);
+      setSelectedTask(null);
+    }
+    clearTaskSelection();
+
+    cleanIds.forEach((id) => {
+      sendAppsScriptAction('deleteTask', { id });
+    });
   };
 
   // Project CRUD Operations
@@ -693,6 +886,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         closeTaskDetail,
         setFilterOptions,
         addAttachmentToTask,
+        addAttachmentsToTask,
         removeAttachmentFromTask,
         createTask,
         updateTask,

@@ -127,7 +127,6 @@ export async function sendTaskAssignmentEmail({
 
   console.info(`[EmailService] Dispatching assignment email to ${recipientEmail} from ${assignorName} (${assignorEmail})...`);
 
-  // Forward attached files if present on the task
   const attachments = task.attachments && Array.isArray(task.attachments) ? task.attachments : [];
 
   return sendAppsScriptAction('sendEmail', {
@@ -163,9 +162,9 @@ export async function sendTaskDeadlineReminderEmail({
   const formattedDueDate = formatDisplayDate(task.dueDate) || 'Not set';
   const formattedStartDate = formatDisplayDate(task.startDate) || 'Not set';
 
-  const accentColor = '#ea580c'; // Light Orange / Red accent for reminder
-  const boxBg = '#fff7ed'; // Soft light-orange background tint
-  const borderColor = '#f97316'; // Light Orange / Red left border
+  const accentColor = '#ea580c';
+  const boxBg = '#fff7ed';
+  const borderColor = '#f97316';
 
   const htmlBody = `
     <div style="font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif; max-width: 620px; margin: 0; color: #1f2937; line-height: 1.6; font-size: 15px; padding: 12px 0;">
@@ -213,7 +212,6 @@ export async function sendTaskDeadlineReminderEmail({
 
   console.info(`[EmailService] Dispatching deadline reminder email to ${recipientEmail} from ${assignorName} (${assignorEmail})...`);
 
-  // Forward attached files if present on the task
   const attachments = task.attachments && Array.isArray(task.attachments) ? task.attachments : [];
 
   return sendAppsScriptAction('sendEmail', {

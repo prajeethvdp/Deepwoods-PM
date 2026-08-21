@@ -4,7 +4,7 @@ import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
 import { Priority, TaskStatus, TaskAttachment } from '../../types';
 import { PRIORITY_CONFIG } from '../../lib/constants';
-import { toYYYYMMDD } from '../../lib/dateUtils';
+import { toYYYYMMDD, isDeadlineBeforeStartDate } from '../../lib/dateUtils';
 import { normalizeRole } from '../../lib/permissions';
 
 interface TaskModalProps {
@@ -36,11 +36,13 @@ export const TaskModal: React.FC<TaskModalProps> = ({
   );
   const [attachments, setAttachments] = useState<TaskAttachment[]>([]);
   const [isSaving, setIsSaving] = useState(false);
+  const [dateError, setDateError] = useState<string | null>(null);
 
   useEffect(() => {
     if (isOpen) {
       setTitle('');
       setDescription('');
+      setDateError(null);
       setProjectId(selectedProjectId !== 'ALL' ? selectedProjectId : 'proj-general');
       const assignable = teamMembers.filter((m) => normalizeRole(m.role) === 'Employee');
       setAssigneeId(assignable[0]?.id || teamMembers[0]?.id || '');
@@ -61,27 +63,37 @@ export const TaskModal: React.FC<TaskModalProps> = ({
 
   if (!isOpen || isEmployee) return null;
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
-    Array.from(files).forEach((file) => {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const dataUrl = event.target?.result as string;
-        const newAttachment: TaskAttachment = {
-          id: `att-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
-          fileName: file.name,
-          fileSize: `${(file.size / 1024).toFixed(1)} KB`,
-          fileType: file.type || 'document',
-          dataUrl,
-          uploadedAt: new Date().toISOString(),
-          uploadedBy: user?.name || 'Team Member',
+    const fileArray = Array.from(files);
+    const readPromises = fileArray.map((file) => {
+      return new Promise<TaskAttachment>((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          const dataUrl = event.target?.result as string;
+          resolve({
+            id: `att-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+            fileName: file.name,
+            fileSize: `${(file.size / 1024).toFixed(1)} KB`,
+            fileType: file.type || 'document',
+            dataUrl,
+            uploadedAt: new Date().toISOString(),
+            uploadedBy: user?.name || 'Team Member',
+          });
         };
-        setAttachments((prev) => [...prev, newAttachment]);
-      };
-      reader.readAsDataURL(file);
+        reader.readAsDataURL(file);
+      });
     });
+
+    try {
+      const newAttachments = await Promise.all(readPromises);
+      setAttachments((prev) => [...prev, ...newAttachments]);
+    } catch (err) {
+      console.warn('Batch file upload in TaskModal error:', err);
+    }
+
     e.target.value = '';
   };
 
@@ -92,6 +104,11 @@ export const TaskModal: React.FC<TaskModalProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) return;
+
+    if (isDeadlineBeforeStartDate(startDate, dueDate)) {
+      setDateError('Target deadline cannot be earlier than the start date.');
+      return;
+    }
 
     setIsSaving(true);
     try {
@@ -116,8 +133,28 @@ export const TaskModal: React.FC<TaskModalProps> = ({
         attachments,
       });
       onClose();
+    } catch (err: any) {
+      setDateError(err?.message || 'Failed to save task.');
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleStartDateChange = (val: string) => {
+    setStartDate(val);
+    if (isDeadlineBeforeStartDate(val, dueDate)) {
+      setDateError('Target deadline cannot be earlier than the start date.');
+    } else {
+      setDateError(null);
+    }
+  };
+
+  const handleDueDateChange = (val: string) => {
+    setDueDate(val);
+    if (isDeadlineBeforeStartDate(startDate, val)) {
+      setDateError('Target deadline cannot be earlier than the start date.');
+    } else {
+      setDateError(null);
     }
   };
 
@@ -145,6 +182,14 @@ export const TaskModal: React.FC<TaskModalProps> = ({
 
         {/* Form Body */}
         <form onSubmit={handleSubmit} className="p-6 overflow-y-auto space-y-4 text-xs">
+          {/* Validation Error Banner */}
+          {dateError && (
+            <div className="bg-rose-50 border border-rose-200 text-rose-800 p-3 rounded-none flex items-center gap-2 text-xs font-semibold animate-in fade-in duration-150">
+              <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+              <span>{dateError}</span>
+            </div>
+          )}
+
           {/* Title */}
           <div>
             <label className="block font-semibold text-slate-700 mb-1">
@@ -250,8 +295,10 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                 type="date"
                 required
                 value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-200 rounded-none p-2.5 text-xs text-slate-900 font-medium focus:bg-white focus:outline-none focus:border-emerald-600"
+                onChange={(e) => handleStartDateChange(e.target.value)}
+                className={`w-full bg-slate-50 border rounded-none p-2.5 text-xs text-slate-900 font-medium focus:bg-white focus:outline-none transition ${
+                  dateError ? 'border-rose-400 focus:border-rose-600' : 'border-slate-200 focus:border-emerald-600'
+                }`}
               />
             </div>
 
@@ -263,8 +310,10 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                 type="date"
                 required
                 value={dueDate}
-                onChange={(e) => setDueDate(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-200 rounded-none p-2.5 text-xs text-slate-900 font-medium focus:bg-white focus:outline-none focus:border-emerald-600"
+                onChange={(e) => handleDueDateChange(e.target.value)}
+                className={`w-full bg-slate-50 border rounded-none p-2.5 text-xs text-slate-900 font-medium focus:bg-white focus:outline-none transition ${
+                  dateError ? 'border-rose-400 focus:border-rose-600' : 'border-slate-200 focus:border-emerald-600'
+                }`}
               />
             </div>
           </div>
