@@ -38,7 +38,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
 }) => {
   const { tasks, projects, deleteProject } = useData();
   const { user, logout, canAccessTeamPage, canManageProjects, isEmployee } = useAuth();
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isCollapsed, setIsCollapsedState] = useState<boolean>(() => {
+    const stored = localStorage.getItem('deepwoods_sidebar_collapsed');
+    return stored !== null ? JSON.parse(stored) : true;
+  });
+
+  const setIsCollapsed = (collapsed: boolean) => {
+    setIsCollapsedState(collapsed);
+    localStorage.setItem('deepwoods_sidebar_collapsed', JSON.stringify(collapsed));
+  };
+
   const [projectsOpen, setProjectsOpen] = useState(true);
 
   const mainNavItems = [
